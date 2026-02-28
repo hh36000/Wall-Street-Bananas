@@ -1,19 +1,87 @@
-import type { Trade, Position } from '../types'
+import type { Trade } from '../types'
 import { gameState } from '../GameState'
 import { marketData } from './MarketDataEngine'
 
 export class TradingSystem {
+  private getProjectedNetMarketExposure(
+    ticker: string,
+    deltaQuantity: number,
+    tradePrice: number
+  ): number {
+    const current = gameState.positions.get(ticker)
+    const nextQuantity = (current?.quantity ?? 0) + deltaQuantity
+
+    let netExposure = 0
+    let handledTicker = false
+
+    for (const pos of gameState.positions.values()) {
+      if (pos.ticker === ticker) {
+        handledTicker = true
+        if (nextQuantity !== 0) {
+          netExposure += nextQuantity * tradePrice
+        }
+        continue
+      }
+
+      const markPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
+      netExposure += pos.quantity * markPrice
+    }
+
+    if (!handledTicker && nextQuantity !== 0) {
+      netExposure += nextQuantity * tradePrice
+    }
+
+    return netExposure
+  }
+
+  private wouldExceedMargin(ticker: string, deltaQuantity: number, tradePrice: number): boolean {
+    if (gameState.capital <= 0) {
+      return false
+    }
+
+    const projectedNetExposure = this.getProjectedNetMarketExposure(ticker, deltaQuantity, tradePrice)
+    return Math.abs(projectedNetExposure) > gameState.maxPositionValue
+  }
+
+  getPositionMarketValue(ticker: string): number {
+    const pos = gameState.positions.get(ticker)
+    if (!pos) return 0
+    const markPrice = marketData.getPrice(ticker) ?? pos.avgPrice
+    return pos.quantity * markPrice
+  }
+
+  getNetMarketExposure(): number {
+    let total = 0
+    for (const pos of gameState.positions.values()) {
+      const markPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
+      total += pos.quantity * markPrice
+    }
+    return total
+  }
+
+  getProjectedPositionMarketValue(ticker: string, deltaQuantity: number, tradePrice: number): number {
+    const existingQuantity = gameState.positions.get(ticker)?.quantity ?? 0
+    return (existingQuantity + deltaQuantity) * tradePrice
+  }
+
+  getGrossMarketExposure(): number {
+    let total = 0
+    for (const pos of gameState.positions.values()) {
+      const markPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
+      total += Math.abs(pos.quantity * markPrice)
+    }
+    return total
+  }
+
   /**
    * Execute a buy trade. Returns true if successful.
    */
   buy(ticker: string, quantity: number, price: number, npcId: string, npcName: string): boolean {
     const cost = quantity * price
 
-    // Check margin limit: total position value after trade can't exceed max
-    const currentPosValue = gameState.totalPositionValue
-    const newPosValue = currentPosValue + cost
-    if (newPosValue > gameState.maxPositionValue && gameState.capital > 0) {
-      return false // would exceed margin
+    // Margin is enforced against projected net market-value exposure.
+    if (this.wouldExceedMargin(ticker, quantity, price)) {
+      return false
     }
 
     // Check debt limit
@@ -68,16 +136,13 @@ export class TradingSystem {
    */
   sell(ticker: string, quantity: number, price: number, npcId: string, npcName: string): boolean {
     const proceeds = quantity * price
-
-    // Check margin limit for new short positions
     const existing = gameState.positions.get(ticker)
-    if (!existing || existing.quantity < quantity) {
-      // Creating or expanding a short position
-      const shortAmount = quantity - (existing?.quantity ?? 0)
-      const newPosValue = gameState.totalPositionValue + shortAmount * price
-      if (newPosValue > gameState.maxPositionValue && gameState.capital > 0) {
-        return false
-      }
+    const isReducingExistingLong =
+      !!existing && existing.quantity > 0 && quantity <= existing.quantity
+
+    // Always allow selling shares you already own (risk-reducing long liquidation).
+    if (!isReducingExistingLong && this.wouldExceedMargin(ticker, -quantity, price)) {
+      return false
     }
 
     // Update position

@@ -24,6 +24,7 @@ export interface Trade {
   ticker: string
   side: 'BUY' | 'SELL'
   quantity: number
+  notional: number
   price: number
   npcId: string
   npcName: string

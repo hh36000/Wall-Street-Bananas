@@ -1,6 +1,9 @@
 import type { Position, Trade, InteractionLog, DayResult } from './types'
 
 export class GameState {
+  static readonly SANDBOX_MAX_EXPOSURE = 1_000_000_000
+  static readonly SANDBOX_MAX_DEBT = -1_000_000_000
+
   // Day tracking
   dayNumber = 1
   currentDate = '1987-01-02'
@@ -13,8 +16,9 @@ export class GameState {
   // Money
   capital = 1000
   startingCapital = 1000
+  tradeNotional = 100_000 // fixed dollar amount per trade
   maxLeverage = 10
-  maxDebt = -10000
+  maxDebt = GameState.SANDBOX_MAX_DEBT
 
   // Debt tracking
   consecutiveDaysInDebt = 0
@@ -41,7 +45,7 @@ export class GameState {
   isGameOver = false
 
   get maxPositionValue(): number {
-    return Math.max(this.capital, 0) * this.maxLeverage
+    return GameState.SANDBOX_MAX_EXPOSURE
   }
 
   get totalPositionValue(): number {

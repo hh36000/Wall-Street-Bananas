@@ -9,6 +9,10 @@ export class DaySummaryScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.scene.isActive('TradingUIScene')) {
+      this.scene.stop('TradingUIScene')
+    }
+
     gameState.phase = 'summary'
 
     const { width, height } = this.scale
@@ -164,13 +168,15 @@ export class DaySummaryScene extends Phaser.Scene {
       y += 18
       for (const pos of gameState.positions.values()) {
         const currentPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
+        const marketValue = pos.quantity * currentPrice
         const posPnl = (currentPrice - pos.avgPrice) * pos.quantity
         const posColor = posPnl >= 0 ? '#4ade80' : '#f87171'
-        const sign = pos.quantity > 0 ? '+' : ''
+        const side = pos.quantity >= 0 ? 'LONG' : 'SHORT'
+        const mvSign = marketValue >= 0 ? '+' : '-'
         this.add.text(
           40,
           y,
-          `  ${pos.ticker}: ${sign}${pos.quantity} @ $${pos.avgPrice.toFixed(2)} (${posPnl >= 0 ? '+' : ''}$${posPnl.toFixed(2)})`,
+          `  ${pos.ticker}: ${side} ${Math.abs(pos.quantity)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} (${posPnl >= 0 ? '+' : ''}$${posPnl.toFixed(2)})`,
           {
             fontSize: '9px',
             fontFamily: 'monospace',

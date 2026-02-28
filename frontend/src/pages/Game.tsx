@@ -3,6 +3,7 @@ import Phaser from 'phaser'
 import { BootScene } from '@/game/scenes/BootScene'
 import { MorningScene } from '@/game/scenes/MorningScene'
 import { TradingFloorScene } from '@/game/scenes/TradingFloorScene'
+import { TradingUIScene } from '@/game/scenes/TradingUIScene'
 import { DaySummaryScene } from '@/game/scenes/DaySummaryScene'
 
 function Game() {
@@ -29,7 +30,7 @@ function Game() {
           debug: false,
         },
       },
-      scene: [BootScene, MorningScene, TradingFloorScene, DaySummaryScene],
+      scene: [BootScene, MorningScene, TradingFloorScene, TradingUIScene, DaySummaryScene],
     }
 
     gameRef.current = new Phaser.Game(config)

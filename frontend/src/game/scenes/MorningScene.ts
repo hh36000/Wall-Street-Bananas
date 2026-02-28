@@ -8,6 +8,10 @@ export class MorningScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.scene.isActive('TradingUIScene')) {
+      this.scene.stop('TradingUIScene')
+    }
+
     const { width, height } = this.scale
 
     // Dark background
@@ -146,13 +150,16 @@ export class MorningScene extends Phaser.Scene {
 
       for (const pos of gameState.positions.values()) {
         const currentPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
+        const marketValue = pos.quantity * currentPrice
         const pnl = (currentPrice - pos.avgPrice) * pos.quantity
         const pnlColor = pnl >= 0 ? '#4ade80' : '#f87171'
+        const mvSign = marketValue >= 0 ? '+' : '-'
+        const side = pos.quantity >= 0 ? 'LONG' : 'SHORT'
         this.add
           .text(
             width / 2,
             infoY,
-            `${pos.ticker}: ${pos.quantity > 0 ? '+' : ''}${pos.quantity} @ $${pos.avgPrice.toFixed(2)}`,
+            `${pos.ticker}: ${side} ${Math.abs(pos.quantity)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} @ $${pos.avgPrice.toFixed(2)}`,
             {
               fontSize: '12px',
               fontFamily: 'monospace',
