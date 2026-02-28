@@ -1,6 +1,12 @@
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from project root
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import default_router
+from routers import default_router, negotiate_router
 import uvicorn
 import logging
 
@@ -26,6 +32,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(default_router.router)
+app.include_router(negotiate_router.router)
 
 if __name__ == "__main__":
     logger.info("Starting uvicorn server on 0.0.0.0:8080")

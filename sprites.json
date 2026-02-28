@@ -8,126 +8,151 @@
       {
         "id": "vinny",
         "filename": "vinny.png",
+        "weakness": "FLATTERY AND RESPECT",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Stocky man, slicked black hair, dark navy jacket, gold chain, tan pants."
       },
       {
         "id": "margaret",
         "filename": "margaret.png",
+        "weakness": "PRECISE DATA AND STATISTICS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Tall slim woman, short auburn hair, glasses, dark red jacket, black skirt."
       },
       {
         "id": "bigal",
         "filename": "bigal.png",
+        "weakness": "FOOD AND DINING",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Very large heavyset man, brown mustache, thinning hair, dark green jacket, holding sandwich."
       },
       {
         "id": "professor",
         "filename": "professor.png",
+        "weakness": "ACADEMIC CREDENTIALS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Thin older man, wire glasses, gray-streaked black hair, beige jacket, holding clipboard."
       },
       {
         "id": "donna",
         "filename": "donna.png",
+        "weakness": "JUICY GOSSIP AND SECRETS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Curvy woman, big teased dark hair, gold earrings, bright red jacket."
       },
       {
         "id": "quietmike",
         "filename": "quietmike.png",
+        "weakness": "SILENCE AND BREVITY",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Lean compact man, short black hair, royal blue jacket, hands at sides."
       },
       {
         "id": "tommy",
         "filename": "tommy.png",
+        "weakness": "REASSURANCE AND CONFIDENCE",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Scrawny young guy, messy red hair, freckles, oversized orange jacket."
       },
       {
         "id": "santos",
         "filename": "santos.png",
+        "weakness": "LUXURY AND FASHION",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Handsome man, combed dark hair, thin mustache, goldenrod jacket, pocket square."
       },
       {
         "id": "ricky",
         "filename": "ricky.png",
+        "weakness": "CONSPIRACY THEORIES",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Wiry man, slicked-back hair, sharp face, purple jacket, loose tie."
       },
       {
         "id": "eddie",
         "filename": "eddie.png",
+        "weakness": "ROUTINE AND TRADITION",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Broad-shouldered Black man, flat-top haircut, dark slate jacket, calm stance."
       },
       {
         "id": "sal",
         "filename": "sal.png",
+        "weakness": "NOSTALGIA AND OLD STORIES",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Old man, white hair, thick eyebrows, worn olive jacket, stooped posture."
       },
       {
         "id": "paulie",
         "filename": "paulie.png",
+        "weakness": "MATHEMATICAL PUZZLES",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Pale lanky man, thick glasses, messy sandy hair, light steel blue jacket."
       },
       {
         "id": "tony",
         "filename": "tony.png",
+        "weakness": "BULLISH MARKET TALK",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Barrel-chested man, wild curly black hair, orange-red jacket, mouth open yelling."
       },
       {
         "id": "nancy",
         "filename": "nancy.png",
+        "weakness": "EFFICIENCY AND DIRECTNESS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Petite woman, black hair in tight ponytail, crimson jacket, arms crossed."
       },
       {
         "id": "frank",
         "filename": "frank.png",
+        "weakness": "NONE",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Thick-necked man, heavy brow, slicked black hair, midnight blue jacket, pinstripe shirt."
       },
       {
         "id": "bernie",
         "filename": "bernie.png",
+        "weakness": "CHARITY AND KINDNESS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Big jolly balding man, tufts of gray hair, thick glasses, round belly, forest green jacket."
       },
       {
         "id": "charlie",
         "filename": "charlie.png",
+        "weakness": "SAFETY AND GUARANTEES",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Slim man, neat black hair, worried face, steel blue jacket with small pins."
       },
       {
         "id": "diane",
         "filename": "diane.png",
+        "weakness": "SPORTS AND FITNESS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Athletic blonde woman, short feathered hair, hot pink jacket, sneakers, big grin."
       },
       {
         "id": "bobby",
         "filename": "bobby.png",
+        "weakness": "MENTORSHIP AND ADVICE",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Baby-faced young man, blond crew cut, wide eyes, brand-new gold jacket, holding notepad."
       },
       {
         "id": "tina",
         "filename": "tina.png",
+        "weakness": "DISPLAYS OF TOUGHNESS",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Tough woman, short spiky brown hair, tan jacket, sleeves pushed up, fists on hips."
       },
       {
         "id": "jerome",
         "filename": "jerome.png",
+        "weakness": "MUSIC AND JAZZ",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Cool lanky Black man, high-top fade, gold sunglasses on forehead, blue-violet jacket."
       },
       {
         "id": "gus",
         "filename": "gus.png",
+        "weakness": "SUPERSTITIONS AND LUCK",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Stocky older man, thick gray beard, bushy eyebrows, teal jacket."
       },
       {
         "id": "maddog",
         "filename": "maddog.png",
+        "weakness": "THRILLS AND DARES",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Wiry man, wild unkempt dark hair, firebrick red jacket, loose tie, manic expression."
       },
       {
         "id": "whitey",
         "filename": "whitey.png",
+        "weakness": "SOCIAL STATUS AND PEDIGREE",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Tall thin man, perfectly parted blond hair, white jacket, pink shirt, popped collar."
       },
       {
         "id": "mama",
         "filename": "mama.png",
+        "weakness": "FAMILY AND HOME COOKING",
         "prompt": "Tiny simple 16-bit pixel art character sprite, top-down RPG style similar to Pokémon Ruby/Sapphire overworld sprites. Extremely small and simple, only 24x32 pixels, minimal detail, 4-5 colors maximum per character, on a transparent background. Warm round older woman, curly gray hair pinned up, glasses on chain, chocolate brown jacket."
       }
     ]

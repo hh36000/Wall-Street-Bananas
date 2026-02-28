@@ -3,7 +3,8 @@ import { gameState } from '../GameState'
 import { tradingSystem } from '../systems/TradingSystem'
 import { npcManager } from '../systems/NPCManager'
 import { marketData } from '../systems/MarketDataEngine'
-import type { TraderDef, NPCQuote } from '../types'
+import { negotiate, buildRelationshipHistory } from '../../services/api'
+import type { TraderDef, NPCQuote, ChatMessage, TradeRecord } from '../types'
 
 export class TradingUIScene extends Phaser.Scene {
   private dialogOpen = false
@@ -20,12 +21,30 @@ export class TradingUIScene extends Phaser.Scene {
 
   private cheatContainer!: Phaser.GameObjects.Container
   private cheatVisible = false
+  private historyContainer!: Phaser.GameObjects.Container
+  private historyVisible = false
 
   private escKey!: Phaser.Input.Keyboard.Key
   private buyKey!: Phaser.Input.Keyboard.Key
   private sellKey!: Phaser.Input.Keyboard.Key
   private flattenKey!: Phaser.Input.Keyboard.Key
   private cheatKeyHandler!: (e: KeyboardEvent) => void
+
+  // Chat state
+  private chatContainer!: Phaser.GameObjects.Container
+  private chatMask!: Phaser.Display.Masks.GeometryMask
+  private chatMessages: Phaser.GameObjects.Text[] = []
+  private chatInput: HTMLInputElement | null = null
+  private sendBtn!: Phaser.GameObjects.Rectangle
+  private sendLabel!: Phaser.GameObjects.Text
+  private conversationHistory: ChatMessage[] = []
+  private sessionTrades: TradeRecord[] = []
+  private isNegotiating = false
+  private thinkingText: Phaser.GameObjects.Text | null = null
+
+  // Original bid/ask for this dialog session (before any negotiation)
+  private originalBid = 0
+  private originalAsk = 0
 
   constructor() {
     super('TradingUIScene')
@@ -41,43 +60,57 @@ export class TradingUIScene extends Phaser.Scene {
     this.flattenKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
 
     this.escKey.on('down', (event: KeyboardEvent) => {
-      if (event.repeat || !this.dialogOpen) return
-      // Close cheat overlay first, then dialog
+      if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
+      if (this.historyVisible) {
+        this.historyVisible = false
+        this.historyContainer.setVisible(false)
+        return
+      }
       if (this.cheatVisible) {
         this.cheatVisible = false
         this.cheatContainer.setVisible(false)
+        this.setChatInputVisible(true)
         return
       }
       this.closeTradeDialog()
     })
 
     this.buyKey.on('down', (event: KeyboardEvent) => {
-      if (event.repeat || !this.dialogOpen) return
+      if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
       this.executeTrade('BUY')
     })
 
     this.sellKey.on('down', (event: KeyboardEvent) => {
-      if (event.repeat || !this.dialogOpen) return
+      if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
       this.executeTrade('SELL')
     })
 
     this.flattenKey.on('down', (event: KeyboardEvent) => {
-      if (event.repeat || !this.dialogOpen) return
+      if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
       this.executeFlatten()
     })
 
-    // Cmd+/ (or Ctrl+/) to toggle cheat overlay
+    // Cmd+/ cheat, H history, Cmd+T toggle chat input focus
     this.cheatKeyHandler = (e: KeyboardEvent) => {
       if (e.key === '/' && (e.metaKey || e.ctrlKey) && this.dialogOpen) {
         e.preventDefault()
         this.toggleCheat()
+      }
+      if ((e.key === 'h' || e.key === 'H') && this.cheatVisible && this.dialogOpen && !this.isChatFocused()) {
+        e.preventDefault()
+        this.toggleHistory()
       }
     }
     window.addEventListener('keydown', this.cheatKeyHandler)
 
     this.events.on('shutdown', () => {
       window.removeEventListener('keydown', this.cheatKeyHandler)
+      this.removeChatInput()
     })
+  }
+
+  private isChatFocused(): boolean {
+    return document.activeElement === this.chatInput
   }
 
   public isDialogOpen(): boolean {
@@ -91,26 +124,51 @@ export class TradingUIScene extends Phaser.Scene {
     this.activeQuote = npcManager.generateQuote(trader)
     if (!this.activeQuote) return
 
+    this.originalBid = this.activeQuote.bid
+    this.originalAsk = this.activeQuote.ask
+
     this.dialogOpen = true
+    this.conversationHistory = []
+    this.sessionTrades = []
+    this.isNegotiating = false
 
     this.dialogTexts.get('name')!.setText(`${trader.nickname} — ${trader.name}`)
     this.dialogTexts.get('quote')!.setText(npcManager.formatQuote(trader, this.activeQuote))
-    this.dialogTexts.get('greeting')!.setText(`"${trader.greeting}"`)
     this.dialogTexts.get('result')!.setText('')
 
-    // Reset cheat overlay
+    // Reset cheat + history overlays
     this.cheatVisible = false
     this.cheatContainer.setVisible(false)
+    this.historyVisible = false
+    this.historyContainer.setVisible(false)
     this.updateCheatInfo()
 
     this.updateTradeInfo()
 
+    // Clear previous chat messages
+    this.clearChatMessages()
+
+    // Add greeting as first NPC message
+    this.addChatMessage('npc', trader.greeting)
+    this.conversationHistory.push({ role: 'npc', content: trader.greeting })
+
     this.dialogContainer.setVisible(true)
+    this.createChatInput()
+    // Auto-focus the chat input on dialog open
+    this.time.delayedCall(50, () => {
+      this.chatInput?.focus()
+    })
   }
 
   public closeTradeDialog(): void {
+    // Save interaction to NPC memory
+    if (this.activeTrader && this.activeTrader.ticker) {
+      this.saveInteractionToMemory()
+    }
+
     this.dialogOpen = false
     this.dialogContainer.setVisible(false)
+    this.removeChatInput()
     this.activeTrader = null
     this.activeQuote = null
   }
@@ -120,11 +178,36 @@ export class TradingUIScene extends Phaser.Scene {
     this.updateHUD()
   }
 
+  private saveInteractionToMemory(): void {
+    if (!this.activeTrader || !this.activeTrader.ticker) return
+    // Only save if there was actual conversation (beyond the greeting)
+    if (this.conversationHistory.length <= 1 && this.sessionTrades.length === 0) return
+
+    const npcId = this.activeTrader.id
+    const ticker = this.activeTrader.ticker
+    const currentPrice = marketData.getPrice(ticker) ?? 0
+
+    const entry = {
+      day: gameState.dayNumber,
+      date: gameState.currentDate,
+      conversation: [...this.conversationHistory],
+      tradesExecuted: [...this.sessionTrades],
+      priceAtTime: currentPrice,
+      nextDayPrice: null as number | null,
+      ticker,
+    }
+
+    if (!gameState.npcMemory.has(npcId)) {
+      gameState.npcMemory.set(npcId, [])
+    }
+    gameState.npcMemory.get(npcId)!.push(entry)
+  }
+
   private buildTradeDialog(): void {
     const cw = this.scale.width
     const ch = this.scale.height
-    const dw = 500
-    const dh = 400
+    const dw = 700
+    const dh = 500
 
     this.dialogContainer = this.add.container(cw / 2, ch / 2)
     this.dialogContainer.setDepth(1000)
@@ -137,6 +220,7 @@ export class TradingUIScene extends Phaser.Scene {
     panel.setStrokeStyle(2, 0x334155)
     this.dialogContainer.add(panel)
 
+    // Trader name
     const nameText = this.add
       .text(0, -dh / 2 + 25, '', {
         fontSize: '20px',
@@ -147,6 +231,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(nameText)
     this.dialogTexts.set('name', nameText)
 
+    // Quote
     const quoteText = this.add
       .text(0, -dh / 2 + 55, '', {
         fontSize: '18px',
@@ -157,20 +242,52 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(quoteText)
     this.dialogTexts.set('quote', quoteText)
 
-    const greetingText = this.add
-      .text(0, -dh / 2 + 95, '', {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#94a3b8',
-        wordWrap: { width: dw - 40 },
-        lineSpacing: 4,
-      })
-      .setOrigin(0.5, 0)
-    this.dialogContainer.add(greetingText)
-    this.dialogTexts.set('greeting', greetingText)
+    // Chat area - masked scrollable region
+    const chatAreaX = -dw / 2 + 25
+    const chatAreaY = -dh / 2 + 80
+    const chatAreaW = dw - 50
+    const chatAreaH = 210
 
+    // Chat background
+    const chatBg = this.add.rectangle(0, chatAreaY + chatAreaH / 2, chatAreaW, chatAreaH, 0x0f0f23, 0.9)
+    chatBg.setStrokeStyle(1, 0x334155)
+    this.dialogContainer.add(chatBg)
+
+    // Chat message container (will be masked)
+    this.chatContainer = this.add.container(chatAreaX + 10, chatAreaY + 5)
+    this.dialogContainer.add(this.chatContainer)
+
+    // Create geometry mask for chat area
+    const maskShape = this.make.graphics({ x: 0, y: 0 })
+    // Convert local dialog coords to screen coords for the mask
+    const maskX = cw / 2 + chatAreaX
+    const maskY = ch / 2 + chatAreaY
+    maskShape.fillRect(maskX, maskY, chatAreaW, chatAreaH)
+    this.chatMask = maskShape.createGeometryMask()
+    this.chatContainer.setMask(this.chatMask)
+
+    // Send button (positioned inside dialog)
+    const sendBtnX = dw / 2 - 55
+    const sendBtnY = chatAreaY + chatAreaH + 22
+    this.sendBtn = this.add.rectangle(sendBtnX, sendBtnY, 60, 26, 0x3b82f6)
+    this.sendBtn.setInteractive({ useHandCursor: true })
+    this.sendBtn.on('pointerover', () => this.sendBtn.setAlpha(0.8))
+    this.sendBtn.on('pointerout', () => this.sendBtn.setAlpha(1))
+    this.sendBtn.on('pointerdown', () => this.onSendMessage())
+    this.dialogContainer.add(this.sendBtn)
+
+    this.sendLabel = this.add
+      .text(sendBtnX, sendBtnY, 'SEND', {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+    this.dialogContainer.add(this.sendLabel)
+
+    // Trade info
     const notionalLabel = this.add
-      .text(0, dh / 2 - 150, '', {
+      .text(0, dh / 2 - 140, '', {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#e2e8f0',
@@ -180,7 +297,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogTexts.set('notional', notionalLabel)
 
     const costText = this.add
-      .text(0, dh / 2 - 118, '', {
+      .text(0, dh / 2 - 115, '', {
         fontSize: '13px',
         fontFamily: 'monospace',
         color: '#94a3b8',
@@ -189,6 +306,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(costText)
     this.dialogTexts.set('cost', costText)
 
+    // Action buttons
     const btnY = dh / 2 - 70
     const btnW = 145
     const btnH = 40
@@ -203,7 +321,7 @@ export class TradingUIScene extends Phaser.Scene {
       this.closeTradeDialog()
     )
 
-    // Flatten button — only visible when holding a position
+    // Flatten button
     const flattenY = btnY + btnH / 2 + 18
     this.flattenBtn = this.add.rectangle(0, flattenY, 200, 22, 0x854d0e)
     this.flattenBtn.setInteractive({ useHandCursor: true })
@@ -221,6 +339,7 @@ export class TradingUIScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.dialogContainer.add(this.flattenLabel)
 
+    // Result text
     const resultText = this.add
       .text(0, dh / 2 - 10, '', {
         fontSize: '14px',
@@ -231,7 +350,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(resultText)
     this.dialogTexts.set('result', resultText)
 
-    // Cheat button — small "?" in bottom-right corner of panel
+    // Cheat button
     const cheatBtn = this.add.rectangle(dw / 2 - 18, dh / 2 - 18, 24, 24, 0x7c3aed, 0.8)
     cheatBtn.setInteractive({ useHandCursor: true })
     cheatBtn.on('pointerover', () => cheatBtn.setAlpha(0.6))
@@ -249,16 +368,16 @@ export class TradingUIScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.dialogContainer.add(cheatBtnLabel)
 
-    // Cheat info overlay
+    // Cheat info overlay (full modal like history)
     this.cheatContainer = this.add.container(0, 0)
     this.cheatContainer.setVisible(false)
 
-    const cheatBg = this.add.rectangle(0, 0, dw - 40, 120, 0x1e1b4b, 0.95)
+    const cheatBg = this.add.rectangle(0, 0, dw - 20, dh - 20, 0x1e1b4b, 0.97)
     cheatBg.setStrokeStyle(1, 0x7c3aed)
     this.cheatContainer.add(cheatBg)
 
     const cheatTitle = this.add
-      .text(0, -42, 'CHEAT SHEET', {
+      .text(0, -dh / 2 + 25, 'CHEAT SHEET', {
         fontSize: '11px',
         fontFamily: 'monospace',
         color: '#a78bfa',
@@ -268,18 +387,262 @@ export class TradingUIScene extends Phaser.Scene {
     this.cheatContainer.add(cheatTitle)
 
     const cheatInfo = this.add
-      .text(0, 0, '', {
-        fontSize: '11px',
+      .text(0, -dh / 2 + 55, '', {
+        fontSize: '12px',
         fontFamily: 'monospace',
         color: '#e9d5ff',
         align: 'center',
-        lineSpacing: 4,
+        lineSpacing: 6,
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5, 0)
     this.cheatContainer.add(cheatInfo)
     this.dialogTexts.set('cheatInfo', cheatInfo)
 
     this.dialogContainer.add(this.cheatContainer)
+
+    // History overlay (toggled with H when cheat sheet is open)
+    this.historyContainer = this.add.container(0, 0)
+    this.historyContainer.setVisible(false)
+
+    const histBg = this.add.rectangle(0, 0, dw - 20, dh - 20, 0x0a0a1a, 0.97)
+    histBg.setStrokeStyle(1, 0x7c3aed)
+    this.historyContainer.add(histBg)
+
+    const histTitle = this.add
+      .text(0, -dh / 2 + 25, 'RELATIONSHIP HISTORY CONTEXT (H to close)', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#a78bfa',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+    this.historyContainer.add(histTitle)
+
+    const histText = this.add
+      .text(-dw / 2 + 30, -dh / 2 + 45, '', {
+        fontSize: '10px',
+        fontFamily: 'monospace',
+        color: '#c4b5fd',
+        wordWrap: { width: dw - 60 },
+        lineSpacing: 3,
+      })
+    this.historyContainer.add(histText)
+    this.dialogTexts.set('historyInfo', histText)
+
+    this.dialogContainer.add(this.historyContainer)
+  }
+
+  private createChatInput(): void {
+    this.removeChatInput()
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.placeholder = 'Type your message...'
+    input.style.cssText = `
+      position: fixed;
+      font-family: monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      background: #1a1a2e;
+      border: 1px solid #334155;
+      border-radius: 3px;
+      padding: 4px 8px;
+      outline: none;
+      box-sizing: border-box;
+      z-index: 1000;
+    `
+
+    this.positionChatInput(input)
+
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter' && !this.isNegotiating) {
+        this.onSendMessage()
+      }
+      if (e.key === 'Escape') {
+        input.blur()
+      }
+    })
+
+    document.body.appendChild(input)
+    this.chatInput = input
+
+    // Reposition on window resize (canvas scale changes)
+    this._resizeHandler = () => this.positionChatInput(input)
+    window.addEventListener('resize', this._resizeHandler)
+  }
+
+  private _resizeHandler: (() => void) | null = null
+
+  private positionChatInput(input: HTMLInputElement): void {
+    const canvas = this.game.canvas
+    const canvasRect = canvas.getBoundingClientRect()
+    const scaleX = canvasRect.width / this.scale.width
+    const scaleY = canvasRect.height / this.scale.height
+
+    const dw = 700
+    const dh = 500
+    const chatAreaH = 210
+    const chatAreaW = dw - 50
+
+    // Game-space coordinates (origin = top-left of game canvas)
+    const gameX = (this.scale.width - dw) / 2 + 25
+    const gameY = (this.scale.height - dh) / 2 + 80 + chatAreaH + 10
+    const gameW = chatAreaW - 70
+    const gameH = 26
+
+    // Convert game-space to screen-space
+    input.style.left = `${canvasRect.left + gameX * scaleX}px`
+    input.style.top = `${canvasRect.top + gameY * scaleY}px`
+    input.style.width = `${gameW * scaleX}px`
+    input.style.height = `${gameH * scaleY}px`
+    input.style.fontSize = `${Math.max(11, 13 * scaleY)}px`
+  }
+
+  private removeChatInput(): void {
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler)
+      this._resizeHandler = null
+    }
+    if (this.chatInput) {
+      this.chatInput.remove()
+      this.chatInput = null
+    }
+  }
+
+  private clearChatMessages(): void {
+    for (const msg of this.chatMessages) {
+      msg.destroy()
+    }
+    this.chatMessages = []
+    // Reset container to original position (dialog-local coords)
+    const dh = 500
+    this.chatContainer.setPosition(this.chatContainer.x, -dh / 2 + 80 + 5)
+  }
+
+  private addChatMessage(role: 'npc' | 'user', text: string): void {
+    const dw = 700
+    const chatAreaW = dw - 50 - 20 // padding
+
+    const prefix = role === 'npc' ? `[${this.activeTrader?.nickname ?? 'NPC'}]` : '[You]'
+    const color = role === 'npc' ? '#facc15' : '#94a3b8'
+
+    // Calculate Y position based on existing messages
+    let yPos = 0
+    if (this.chatMessages.length > 0) {
+      const lastMsg = this.chatMessages[this.chatMessages.length - 1]
+      yPos = lastMsg.y + lastMsg.height + 6
+    }
+
+    const msgText = this.add.text(0, yPos, `${prefix} ${text}`, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color,
+      wordWrap: { width: chatAreaW },
+      lineSpacing: 2,
+    })
+
+    this.chatContainer.add(msgText)
+    this.chatMessages.push(msgText)
+
+    // Auto-scroll: shift container up if messages overflow
+    const chatAreaH = 210
+    const totalHeight = yPos + msgText.height
+    if (totalHeight > chatAreaH - 10) {
+      const overflow = totalHeight - (chatAreaH - 10)
+      // Move all messages up by adjusting the container's local offset
+      for (const m of this.chatMessages) {
+        m.y -= overflow
+      }
+    }
+  }
+
+  private async onSendMessage(): Promise<void> {
+    if (!this.chatInput || !this.activeTrader || !this.activeQuote || this.isNegotiating) return
+    const message = this.chatInput.value.trim()
+    if (!message) return
+
+    this.chatInput.value = ''
+    this.isNegotiating = true
+    this.chatInput.disabled = true
+
+    // Add user message to chat
+    this.addChatMessage('user', message)
+    this.conversationHistory.push({ role: 'user', content: message })
+
+    // Show thinking indicator
+    this.showThinking()
+
+    try {
+      const response = await negotiate({
+        trader_id: this.activeTrader.id,
+        trader_name: this.activeTrader.name,
+        trader_personality: this.activeTrader.personality,
+        trader_weakness: this.activeTrader.weakness,
+        ticker: this.activeTrader.ticker!,
+        current_bid: this.originalBid,
+        current_ask: this.originalAsk,
+        message,
+        conversation_history: this.conversationHistory.slice(0, -1), // exclude current message (backend adds it)
+        relationship_history: buildRelationshipHistory(this.activeTrader.id),
+      })
+
+      this.hideThinking()
+
+      // Add NPC response to chat
+      this.addChatMessage('npc', response.npc_message)
+      this.conversationHistory.push({ role: 'npc', content: response.npc_message })
+
+      // Update quote whenever the returned prices differ from current
+      const bidChanged = response.updated_bid !== this.activeQuote.bid
+      const askChanged = response.updated_ask !== this.activeQuote.ask
+      if (bidChanged || askChanged) {
+        this.activeQuote.bid = response.updated_bid
+        this.activeQuote.ask = response.updated_ask
+        this.activeQuote.spread = response.updated_ask - response.updated_bid
+
+        // Update displayed quote with flash effect
+        const quoteText = this.dialogTexts.get('quote')!
+        quoteText.setText(npcManager.formatQuote(this.activeTrader, this.activeQuote))
+        quoteText.setColor('#4ade80')
+        this.time.delayedCall(1500, () => {
+          quoteText.setColor('#e2e8f0')
+        })
+
+        this.updateTradeInfo()
+      }
+    } catch (err) {
+      this.hideThinking()
+      this.addChatMessage('npc', '*scratches head* ...gimme a sec, kid.')
+    }
+
+    this.isNegotiating = false
+    if (this.chatInput) {
+      this.chatInput.disabled = false
+      this.chatInput.focus()
+    }
+  }
+
+  private showThinking(): void {
+    let yPos = 0
+    if (this.chatMessages.length > 0) {
+      const lastMsg = this.chatMessages[this.chatMessages.length - 1]
+      yPos = lastMsg.y + lastMsg.height + 6
+    }
+
+    this.thinkingText = this.add.text(0, yPos, '...', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#64748b',
+    })
+    this.chatContainer.add(this.thinkingText)
+  }
+
+  private hideThinking(): void {
+    if (this.thinkingText) {
+      this.thinkingText.destroy()
+      this.thinkingText = null
+    }
   }
 
   private createDialogButton(
@@ -369,6 +732,7 @@ export class TradingUIScene extends Phaser.Scene {
       resultText.setText(
         `${verb} ${this.fmt(quantity)} ${ticker} @ $${this.fmt(price)} ($${this.fmt(gameState.tradeNotional)})`
       )
+      this.sessionTrades.push({ side, quantity, price })
       this.updateTradeInfo()
       this.updateHUD()
     } else {
@@ -387,6 +751,7 @@ export class TradingUIScene extends Phaser.Scene {
     // Close longs at bid, close shorts at ask
     const price = pos.quantity > 0 ? this.activeQuote.bid : this.activeQuote.ask
     const side = pos.quantity > 0 ? 'LONG' : 'SHORT'
+    const flattenSide: 'BUY' | 'SELL' = pos.quantity > 0 ? 'SELL' : 'BUY'
     const closedQty = tradingSystem.flatten(
       ticker,
       price,
@@ -401,6 +766,7 @@ export class TradingUIScene extends Phaser.Scene {
       resultText.setText(
         `Flattened ${side} ${this.fmt(closedQty)} ${ticker} @ $${this.fmt(price)} ($${this.fmt(notional)})`
       )
+      this.sessionTrades.push({ side: flattenSide, quantity: closedQty, price })
       this.updateTradeInfo()
       this.updateHUD()
     }
@@ -409,6 +775,27 @@ export class TradingUIScene extends Phaser.Scene {
   private toggleCheat(): void {
     this.cheatVisible = !this.cheatVisible
     this.cheatContainer.setVisible(this.cheatVisible)
+    if (!this.cheatVisible) {
+      this.historyVisible = false
+      this.historyContainer.setVisible(false)
+    }
+    this.setChatInputVisible(!this.cheatVisible)
+  }
+
+  private toggleHistory(): void {
+    this.historyVisible = !this.historyVisible
+    this.historyContainer.setVisible(this.historyVisible)
+    if (this.historyVisible && this.activeTrader) {
+      const history = buildRelationshipHistory(this.activeTrader.id)
+      this.dialogTexts.get('historyInfo')!.setText(history || '(No prior interactions with this trader)')
+    }
+  }
+
+  private setChatInputVisible(visible: boolean): void {
+    if (this.chatInput) {
+      this.chatInput.style.display = visible ? '' : 'none'
+      if (!visible) this.chatInput.blur()
+    }
   }
 
   private updateCheatInfo(): void {
@@ -423,6 +810,7 @@ export class TradingUIScene extends Phaser.Scene {
     const lines = [
       `${trader.name}  |  ${ticker}`,
       `Spread: ${trader.spreadStyle.toUpperCase()} (~${spreadPct} round-trip)`,
+      `Weakness: ${trader.weakness}`,
       `Today close: $${todayPrice?.toFixed(2) ?? '?'}`,
     ]
 
@@ -434,6 +822,8 @@ export class TradingUIScene extends Phaser.Scene {
     } else {
       lines.push('Tomorrow: —')
     }
+
+    lines.push('[H] View relationship history context')
 
     this.dialogTexts.get('cheatInfo')!.setText(lines.join('\n'))
   }
@@ -523,7 +913,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer.add(endDayBtn)
 
     const endDayLabel = this.add
-      .text(cw / 2 + 185, 53, 'END DAY', {
+      .text(cw / 2 + 185, 53, 'END DAY (\u2318D)', {
         fontSize: '11px',
         fontFamily: 'monospace',
         color: '#ffffff',

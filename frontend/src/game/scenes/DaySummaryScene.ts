@@ -217,7 +217,7 @@ export class DaySummaryScene extends Phaser.Scene {
     btn.setInteractive({ useHandCursor: true })
 
     this.add
-      .text(width / 2, btnY, 'NEXT DAY', {
+      .text(width / 2, btnY, 'NEXT DAY (N)', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ffffff',
@@ -227,6 +227,10 @@ export class DaySummaryScene extends Phaser.Scene {
     btn.on('pointerover', () => btn.setFillStyle(0x3b82f6))
     btn.on('pointerout', () => btn.setFillStyle(0x2563eb))
     btn.on('pointerdown', () => {
+      this.advanceToNextDay()
+    })
+
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.N).on('down', () => {
       this.advanceToNextDay()
     })
   }

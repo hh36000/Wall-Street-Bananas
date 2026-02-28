@@ -1,4 +1,4 @@
-import type { Position, Trade, InteractionLog, DayResult } from './types'
+import type { Position, Trade, InteractionLog, DayResult, NPCInteractionEntry } from './types'
 
 export class GameState {
   static readonly SANDBOX_MAX_EXPOSURE = 1_000_000_000
@@ -34,6 +34,9 @@ export class GameState {
 
   // NPC interaction logs: npcId -> InteractionLog[]
   npcInteractions: Map<string, InteractionLog[]> = new Map()
+
+  // NPC memory for AI negotiation: npcId -> interaction history
+  npcMemory: Map<string, NPCInteractionEntry[]> = new Map()
 
   // Day results history
   dayResults: DayResult[] = []
@@ -71,6 +74,7 @@ export class GameState {
     this.allTrades = []
     this.todayTrades = []
     this.npcInteractions.clear()
+    this.npcMemory.clear()
     this.dayResults = []
     this.cumulativePnl = 0
     this.isGameOver = false

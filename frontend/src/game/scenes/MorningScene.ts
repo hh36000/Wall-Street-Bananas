@@ -12,6 +12,21 @@ export class MorningScene extends Phaser.Scene {
       this.scene.stop('TradingUIScene')
     }
 
+    // Fill in nextDayPrice for previous day's NPC interactions
+    if (gameState.dayNumber > 1) {
+      const prevDay = gameState.dayNumber - 1
+      for (const entries of gameState.npcMemory.values()) {
+        for (const entry of entries) {
+          if (entry.day === prevDay && entry.nextDayPrice == null) {
+            const price = marketData.getPrice(entry.ticker)
+            if (price != null) {
+              entry.nextDayPrice = price
+            }
+          }
+        }
+      }
+    }
+
     const { width, height } = this.scale
 
     // Number formatting: 2 decimals + commas
@@ -313,7 +328,7 @@ export class MorningScene extends Phaser.Scene {
     btn.setInteractive({ useHandCursor: true })
 
     const btnText = this.add
-      .text(width / 2, btnY, 'START TRADING', {
+      .text(width / 2, btnY, 'START TRADING (S)', {
         fontSize: '18px',
         fontFamily: 'monospace',
         color: '#ffffff',
@@ -327,6 +342,10 @@ export class MorningScene extends Phaser.Scene {
       btn.setFillStyle(0x16a34a)
     })
     btn.on('pointerdown', () => {
+      this.scene.start('TradingFloorScene')
+    })
+
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S).on('down', () => {
       this.scene.start('TradingFloorScene')
     })
   }

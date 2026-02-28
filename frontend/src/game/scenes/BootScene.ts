@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
 import { marketData } from '../systems/MarketDataEngine'
-import { TRADERS } from '../data/traders'
 import type { MarketDataJSON } from '../types'
 
 export class BootScene extends Phaser.Scene {
@@ -58,9 +57,20 @@ export class BootScene extends Phaser.Scene {
 
     // Player uses a rectangle now — skip loading the oversized PNG
 
-    // NPC sprites (only load ones that exist as files)
-    const existingSprites = ['vinny-tp', 'margaret-tp', 'mama-tp']
-    for (const name of existingSprites) {
+    // NPC sprites — load all trader images
+    // These three have the -tp suffix in filename
+    const tpSprites = ['vinny-tp', 'margaret-tp', 'mama-tp']
+    for (const name of tpSprites) {
+      this.load.image(name, `/game-assets/sprites/${name}.png`)
+    }
+    // All other traders use their id as filename
+    const otherSprites = [
+      'bigal', 'professor', 'donna', 'quietmike', 'tommy', 'santos',
+      'ricky', 'eddie', 'sal', 'paulie', 'tony', 'nancy', 'bernie',
+      'charlie', 'diane', 'bobby', 'tina', 'jerome', 'gus', 'maddog',
+      'whitey', 'frank',
+    ]
+    for (const name of otherSprites) {
       this.load.image(name, `/game-assets/sprites/${name}.png`)
     }
 
@@ -73,14 +83,7 @@ export class BootScene extends Phaser.Scene {
     const json = this.cache.json.get('market-data') as MarketDataJSON
     marketData.load(json)
 
-    // Generate placeholder textures for NPCs that don't have sprite files
-    const existingSpriteIds = new Set(['vinny', 'margaret', 'mama'])
-
-    for (const trader of TRADERS) {
-      if (!existingSpriteIds.has(trader.id)) {
-        this.generatePlaceholderSprite(trader.id, trader.color, trader.nickname[0])
-      }
-    }
+    // All traders now have sprite images — no placeholder generation needed
 
     // Generate player sprite placeholder if the loaded image is too large
     // (the real player.png is 1MB which might be huge - we'll use it but scale down)
@@ -89,23 +92,4 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('MorningScene')
   }
 
-  private generatePlaceholderSprite(id: string, color: number, initial: string): void {
-    const size = 32
-    const graphics = this.add.graphics()
-
-    // Body circle
-    graphics.fillStyle(color, 1)
-    graphics.fillCircle(size / 2, size / 2, size / 2 - 2)
-
-    // Border
-    graphics.lineStyle(2, 0xffffff, 0.5)
-    graphics.strokeCircle(size / 2, size / 2, size / 2 - 2)
-
-    // Generate texture
-    graphics.generateTexture(id, size, size)
-    graphics.destroy()
-
-    // Add initial letter as a separate step (text can't go into generateTexture easily)
-    // We'll handle the initial display in the TradingFloor scene directly
-  }
 }

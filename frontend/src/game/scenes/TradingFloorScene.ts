@@ -1,37 +1,49 @@
 import Phaser from 'phaser'
 import { gameState } from '../GameState'
 import { tradingSystem } from '../systems/TradingSystem'
-import { TRADERS } from '../data/traders'
+import { TRADERS, getTraderByTicker } from '../data/traders'
 import type { TraderDef } from '../types'
 import { TradingUIScene } from './TradingUIScene'
 
-// NPC positions scattered across the 1408x768 trading floor
+// NPC positions on the trading floor (1408x768)
+// Clustered around the pit and on the open floor, away from edge desks
 const NPC_POSITIONS: Record<string, { x: number; y: number }> = {
-  vinny: { x: 200, y: 200 },
-  margaret: { x: 450, y: 150 },
-  bigal: { x: 700, y: 180 },
-  professor: { x: 950, y: 160 },
-  donna: { x: 1200, y: 200 },
-  quietmike: { x: 150, y: 350 },
-  tommy: { x: 380, y: 320 },
-  santos: { x: 600, y: 380 },
-  ricky: { x: 850, y: 340 },
-  eddie: { x: 1100, y: 370 },
-  sal: { x: 1300, y: 330 },
-  paulie: { x: 250, y: 500 },
-  tony: { x: 500, y: 520 },
-  nancy: { x: 750, y: 480 },
-  bernie: { x: 1000, y: 510 },
-  charlie: { x: 1250, y: 490 },
-  diane: { x: 180, y: 630 },
-  bobby: { x: 420, y: 660 },
-  tina: { x: 650, y: 620 },
-  jerome: { x: 900, y: 650 },
-  gus: { x: 1150, y: 630 },
-  maddog: { x: 1350, y: 600 },
-  whitey: { x: 350, y: 450 },
-  mama: { x: 1050, y: 250 },
-  frank: { x: 730, y: 280 },
+  // Upper floor (between top wall and pit)
+  vinny: { x: 300, y: 240 },
+  margaret: { x: 480, y: 220 },
+  bigal: { x: 680, y: 230 },
+  professor: { x: 880, y: 220 },
+  donna: { x: 1080, y: 250 },
+
+  // Left side of pit
+  quietmike: { x: 280, y: 380 },
+  tommy: { x: 400, y: 330 },
+  paulie: { x: 310, y: 510 },
+
+  // Right side of pit
+  mama: { x: 1000, y: 300 },
+  sal: { x: 1120, y: 380 },
+  eddie: { x: 1050, y: 450 },
+
+  // Around the pit walkway
+  frank: { x: 700, y: 310 },
+  santos: { x: 580, y: 410 },
+  ricky: { x: 830, y: 390 },
+  nancy: { x: 720, y: 470 },
+
+  // Mid floor
+  whitey: { x: 400, y: 460 },
+  tony: { x: 530, y: 530 },
+  bernie: { x: 920, y: 530 },
+  charlie: { x: 1080, y: 540 },
+
+  // Lower floor (above bottom desks)
+  diane: { x: 310, y: 600 },
+  bobby: { x: 460, y: 620 },
+  tina: { x: 640, y: 610 },
+  jerome: { x: 820, y: 620 },
+  gus: { x: 980, y: 610 },
+  maddog: { x: 1130, y: 590 },
 }
 
 const PLAYER_SPEED = 200
@@ -55,6 +67,11 @@ export class TradingFloorScene extends Phaser.Scene {
 
   private uiScene!: TradingUIScene
   private dayEnded = false
+
+  // Ticker search
+  private tickerSearchInput: HTMLInputElement | null = null
+  private tickerSearchOverlay: Phaser.GameObjects.Container | null = null
+  private tickerSearchKeyHandler: ((e: KeyboardEvent) => void) | null = null
 
   constructor() {
     super('TradingFloorScene')
@@ -144,8 +161,27 @@ export class TradingFloorScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(9999)
 
+    // Cmd+F ticker search
+    this.tickerSearchKeyHandler = (e: KeyboardEvent) => {
+      if ((e.key === 'f' || e.key === 'F') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        if (this.uiScene.isDialogOpen()) return
+        this.openTickerSearch()
+      }
+      if ((e.key === 'd' || e.key === 'D') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        this.endTradingDay()
+      }
+    }
+    window.addEventListener('keydown', this.tickerSearchKeyHandler)
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('trading:end-day-early', this.endTradingDay, this)
+      this.closeTickerSearch()
+      if (this.tickerSearchKeyHandler) {
+        window.removeEventListener('keydown', this.tickerSearchKeyHandler)
+        this.tickerSearchKeyHandler = null
+      }
       if (this.scene.isActive('TradingUIScene')) {
         this.scene.stop('TradingUIScene')
       }
@@ -153,10 +189,40 @@ export class TradingFloorScene extends Phaser.Scene {
   }
 
   private placeNPCs(): void {
+    // Map trader ids to their texture keys (only needed where filename differs from id)
     const spriteMap: Record<string, string> = {
       vinny: 'vinny-tp',
       margaret: 'margaret-tp',
       mama: 'mama-tp',
+    }
+
+    // Per-sprite scale + content top offset (pixels from image center to top of visible art)
+    const spriteInfo: Record<string, { scale: number; topOff: number }> = {
+      vinny:     { scale: 0.085, topOff: -399 },
+      margaret:  { scale: 0.097, topOff: -308 },
+      bigal:     { scale: 0.069, topOff: -398 },
+      professor: { scale: 0.078, topOff: -359 },
+      donna:     { scale: 0.080, topOff: -378 },
+      quietmike: { scale: 0.072, topOff: -512 },
+      tommy:     { scale: 0.085, topOff: -339 },
+      santos:    { scale: 0.077, topOff: -375 },
+      ricky:     { scale: 0.100, topOff: -266 },
+      eddie:     { scale: 0.105, topOff: -266 },
+      sal:       { scale: 0.081, topOff: -337 },
+      paulie:    { scale: 0.150, topOff: -170 },
+      tony:      { scale: 0.080, topOff: -349 },
+      nancy:     { scale: 0.127, topOff: -259 },
+      bernie:    { scale: 0.072, topOff: -378 },
+      charlie:   { scale: 0.150, topOff: -113 },
+      diane:     { scale: 0.073, topOff: -378 },
+      bobby:     { scale: 0.130, topOff: -225 },
+      tina:      { scale: 0.101, topOff: -285 },
+      jerome:    { scale: 0.108, topOff: -317 },
+      gus:       { scale: 0.105, topOff: -247 },
+      maddog:    { scale: 0.078, topOff: -419 },
+      whitey:    { scale: 0.094, topOff: -349 },
+      mama:      { scale: 0.074, topOff: -370 },
+      frank:     { scale: 0.079, topOff: -337 },
     }
 
     for (const trader of TRADERS) {
@@ -167,53 +233,28 @@ export class TradingFloorScene extends Phaser.Scene {
       container.setDepth(10)
 
       const textureKey = spriteMap[trader.id] ?? trader.id
-      if (this.textures.exists(textureKey)) {
-        const sprite = this.add.sprite(0, 0, textureKey)
-        if (spriteMap[trader.id]) {
-          sprite.setScale(0.04)
-        }
-        container.add(sprite)
-      } else {
-        const gfx = this.add.graphics()
-        gfx.fillStyle(trader.color, 1)
-        gfx.fillCircle(0, 0, 12)
-        gfx.lineStyle(1, 0xffffff, 0.4)
-        gfx.strokeCircle(0, 0, 12)
-        container.add(gfx)
+      const info = spriteInfo[trader.id] ?? { scale: 0.08, topOff: -350 }
+      const sprite = this.add.sprite(0, 0, textureKey)
+      sprite.setScale(info.scale)
+      container.add(sprite)
 
-        const initial = this.add
-          .text(0, 0, trader.nickname[0], {
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: '#ffffff',
-          })
-          .setOrigin(0.5)
-        container.add(initial)
-      }
+      // Position label just above the visible top of the character art
+      const labelY = info.topOff * info.scale - 4
 
-      const nameLabel = this.add
-        .text(0, -22, trader.nickname, {
-          fontSize: '6px',
+      const labelText = trader.ticker
+        ? `${trader.nickname}\n${trader.ticker}`
+        : trader.nickname
+      const label = this.add
+        .text(0, labelY, labelText, {
+          fontSize: '10px',
           fontFamily: 'monospace',
-          color: '#e2e8f0',
-          backgroundColor: '#00000088',
-          padding: { x: 2, y: 1 },
+          color: '#facc15',
+          backgroundColor: '#000000',
+          padding: { x: 4, y: 2 },
+          align: 'center',
         })
-        .setOrigin(0.5)
-      container.add(nameLabel)
-
-      if (trader.ticker) {
-        const tickerLabel = this.add
-          .text(0, 18, trader.ticker, {
-            fontSize: '6px',
-            fontFamily: 'monospace',
-            color: '#facc15',
-            backgroundColor: '#00000088',
-            padding: { x: 2, y: 1 },
-          })
-          .setOrigin(0.5)
-        container.add(tickerLabel)
-      }
+        .setOrigin(0.5, 1)
+      container.add(label)
 
       this.physics.add.existing(container)
       const body = container.body as Phaser.Physics.Arcade.Body
@@ -251,6 +292,114 @@ export class TradingFloorScene extends Phaser.Scene {
     }
 
     this.scene.start('DaySummaryScene')
+  }
+
+  private openTickerSearch(): void {
+    if (this.tickerSearchInput) return
+
+    // Phaser overlay: backdrop + label
+    const cw = this.cameras.main.width
+    const ch = this.cameras.main.height
+    this.tickerSearchOverlay = this.add.container(0, 0).setDepth(10000).setScrollFactor(0)
+
+    const backdrop = this.add.rectangle(cw / 2, ch / 2, cw, ch, 0x000000, 0.5)
+    this.tickerSearchOverlay.add(backdrop)
+
+    const label = this.add
+      .text(cw / 2, ch / 2 - 50, 'FIND TRADER BY TICKER', {
+        fontSize: '16px',
+        fontFamily: 'monospace',
+        color: '#facc15',
+      })
+      .setOrigin(0.5)
+    this.tickerSearchOverlay.add(label)
+
+    const hint = this.add
+      .text(cw / 2, ch / 2 + 40, 'Enter a ticker symbol (e.g. IBM, XOM, GE) and press Enter', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#94a3b8',
+      })
+      .setOrigin(0.5)
+    this.tickerSearchOverlay.add(hint)
+
+    const errorText = this.add
+      .text(cw / 2, ch / 2 + 65, '', {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#f87171',
+      })
+      .setOrigin(0.5)
+    this.tickerSearchOverlay.add(errorText)
+
+    // DOM input
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.placeholder = 'TICKER...'
+    input.style.cssText = `
+      position: fixed;
+      font-family: monospace;
+      font-size: 22px;
+      color: #facc15;
+      background: #1a1a2e;
+      border: 2px solid #facc15;
+      border-radius: 4px;
+      padding: 8px 16px;
+      outline: none;
+      box-sizing: border-box;
+      text-align: center;
+      text-transform: uppercase;
+      z-index: 1000;
+      letter-spacing: 2px;
+    `
+
+    // Position centered on screen
+    const canvas = this.game.canvas
+    const canvasRect = canvas.getBoundingClientRect()
+    const scaleX = canvasRect.width / this.scale.width
+    const scaleY = canvasRect.height / this.scale.height
+    const inputW = 200
+    const inputH = 44
+    const gameX = (this.scale.width - inputW) / 2
+    const gameY = this.scale.height / 2 - inputH / 2
+
+    input.style.left = `${canvasRect.left + gameX * scaleX}px`
+    input.style.top = `${canvasRect.top + gameY * scaleY}px`
+    input.style.width = `${inputW * scaleX}px`
+    input.style.height = `${inputH * scaleY}px`
+
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation()
+      if (e.key === 'Enter') {
+        const ticker = input.value.trim().toUpperCase()
+        if (!ticker) return
+        const trader = getTraderByTicker(ticker)
+        if (trader) {
+          this.closeTickerSearch()
+          this.uiScene.openTradeDialog(trader)
+        } else {
+          errorText.setText(`No trader found for "${ticker}"`)
+        }
+      }
+      if (e.key === 'Escape') {
+        this.closeTickerSearch()
+      }
+    })
+
+    document.body.appendChild(input)
+    this.tickerSearchInput = input
+    input.focus()
+  }
+
+  private closeTickerSearch(): void {
+    if (this.tickerSearchInput) {
+      this.tickerSearchInput.remove()
+      this.tickerSearchInput = null
+    }
+    if (this.tickerSearchOverlay) {
+      this.tickerSearchOverlay.destroy()
+      this.tickerSearchOverlay = null
+    }
   }
 
   update(): void {

@@ -46,7 +46,29 @@ export interface TraderDef {
   personality: string
   greeting: string
   spreadStyle: SpreadStyle
+  weakness: string
   color: number // hex color for placeholder sprite
+}
+
+export interface ChatMessage {
+  role: 'npc' | 'user'
+  content: string
+}
+
+export interface TradeRecord {
+  side: 'BUY' | 'SELL'
+  quantity: number
+  price: number
+}
+
+export interface NPCInteractionEntry {
+  day: number
+  date: string
+  conversation: ChatMessage[]
+  tradesExecuted: TradeRecord[]
+  priceAtTime: number
+  nextDayPrice: number | null
+  ticker: string
 }
 
 export interface InteractionLog {

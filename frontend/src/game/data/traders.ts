@@ -9,6 +9,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Aggressive, fast-talking Brooklyn Italian. Respects big traders, dismisses small-timers. Tight spreads but pushes for volume.',
     greeting: 'Hey kid, you want IBM or what? I ain\'t got all day.',
     spreadStyle: 'tight',
+    weakness: 'FLATTERY AND RESPECT',
     color: 0x1a237e,
   },
   {
@@ -19,6 +20,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Precise, no-nonsense former accountant. Gives fair prices but never negotiates. Respects preparation.',
     greeting: 'GE. My bid and offer are on the board. Take it or leave it.',
     spreadStyle: 'normal',
+    weakness: 'PRECISE DATA AND STATISTICS',
     color: 0x880e4f,
   },
   {
@@ -29,6 +31,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Jovial, loud, always eating. Wide spreads but will tighten up for regulars. Loves to chat.',
     greeting: 'Hey there! Want some Exxon? Grab a seat, have a sandwich.',
     spreadStyle: 'wide',
+    weakness: 'FOOD AND DINING',
     color: 0x1b5e20,
   },
   {
@@ -39,6 +42,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Former economics professor. Lectures about fundamentals. Fair prices. Loves explaining why AT&T is undervalued.',
     greeting: 'Ah, a student of the market. AT&T — a study in telecommunications monopoly valuations.',
     spreadStyle: 'normal',
+    weakness: 'ACADEMIC CREDENTIALS',
     color: 0x4a148c,
   },
   {
@@ -49,6 +53,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Gossip queen of the floor. Knows everyone\'s business. Will share rumors for trades. Normal spreads.',
     greeting: 'Honey! You heard what happened with the Coke deal? Come closer, I\'ll tell ya.',
     spreadStyle: 'normal',
+    weakness: 'JUICY GOSSIP AND SECRETS',
     color: 0xc62828,
   },
   {
@@ -59,6 +64,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Man of few words. Nods or shakes head. Tightest spreads on the floor. Reliable but boring.',
     greeting: '...J&J. Quarter bid, half offer.',
     spreadStyle: 'tight',
+    weakness: 'SILENCE AND BREVITY',
     color: 0x0d47a1,
   },
   {
@@ -69,6 +75,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Nervous, repeats himself. Decent prices but second-guesses every trade. Young and jumpy.',
     greeting: 'Merck! Yeah, Merck! You want Merck? I got Merck!',
     spreadStyle: 'normal',
+    weakness: 'REASSURANCE AND CONFIDENCE',
     color: 0xe65100,
   },
   {
@@ -79,6 +86,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Suave, well-dressed, charming. Makes every trade feel like a favor. Slightly wide spreads disguised with charisma.',
     greeting: 'My friend! P&G today? I have something special for you.',
     spreadStyle: 'wide',
+    weakness: 'LUXURY AND FASHION',
     color: 0xf9a825,
   },
   {
@@ -89,6 +97,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Shifty, unreliable. Quotes change fast. Will try to mislead you about direction. Wide spreads.',
     greeting: 'Philip Morris, baby. Trust me on this one... it\'s about to move.',
     spreadStyle: 'wide',
+    weakness: 'CONSPIRACY THEORIES',
     color: 0x6a1b9a,
   },
   {
@@ -99,6 +108,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Calm, methodical, never rushed. Rock-solid quotes. The guy you go to when you need reliability.',
     greeting: '3M. Same as always. Fair price, fair trade.',
     spreadStyle: 'tight',
+    weakness: 'ROUTINE AND TRADITION',
     color: 0x37474f,
   },
   {
@@ -109,6 +119,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Ancient floor veteran. Been trading since the 50s. Slow but wise. Gives good prices to those who are patient.',
     greeting: 'Boeing... I been trading this since before you were born, kid.',
     spreadStyle: 'normal',
+    weakness: 'NOSTALGIA AND OLD STORIES',
     color: 0x3e2723,
   },
   {
@@ -119,6 +130,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Math savant. Calculates everything in his head. Tight spreads, rarely wrong on price.',
     greeting: 'Chevron. Based on my calculations, fair value is... here.',
     spreadStyle: 'tight',
+    weakness: 'MATHEMATICAL PUZZLES',
     color: 0x546e7a,
   },
   {
@@ -129,6 +141,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Permanently bullish on everything. Loud, enthusiastic. Wide spreads but infectious energy.',
     greeting: 'CATERPILLAR! This thing is going to the MOON! BUY BUY BUY!',
     spreadStyle: 'wide',
+    weakness: 'BULLISH MARKET TALK',
     color: 0xd84315,
   },
   {
@@ -139,6 +152,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Sharp, cuts through BS. Tight spreads, fast execution. Doesn\'t suffer fools.',
     greeting: 'American Express. My price is fair. Don\'t waste my time.',
     spreadStyle: 'tight',
+    weakness: 'EFFICIENCY AND DIRECTNESS',
     color: 0xad1457,
   },
   {
@@ -149,6 +163,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Kindly, grandfatherly. Gives newcomers good prices. Wide spreads for regulars who should know better.',
     greeting: 'Walmart! Come, come. A nice stock for a nice person.',
     spreadStyle: 'normal',
+    weakness: 'CHARITY AND KINDNESS',
     color: 0x2e7d32,
   },
   {
@@ -159,6 +174,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Anxious, always worried about crashes. Normal spreads but panics easily. Sells cheap when scared.',
     greeting: 'Pepsi... you think the market\'s okay today? It feels wobbly...',
     spreadStyle: 'normal',
+    weakness: 'SAFETY AND GUARANTEES',
     color: 0x1565c0,
   },
   {
@@ -169,6 +185,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Athletic, energetic, fastest trader on the floor. Tight spreads, lightning execution.',
     greeting: 'Disney! Quick, what do you want? I got places to be!',
     spreadStyle: 'tight',
+    weakness: 'SPORTS AND FITNESS',
     color: 0xe91e63,
   },
   {
@@ -179,6 +196,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Brand new to the floor. Eager but clueless. Wide spreads because he doesn\'t know better. Gets sharper over time.',
     greeting: 'Ford! I think... yeah, Ford. Is this price right? I\'m still learning.',
     spreadStyle: 'wide',
+    weakness: 'MENTORSHIP AND ADVICE',
     color: 0xffc107,
   },
   {
@@ -189,6 +207,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'No-nonsense, arms-crossed, prove-yourself attitude. Tight spreads once you earn her respect.',
     greeting: 'Honeywell. You here to trade or just look pretty?',
     spreadStyle: 'normal',
+    weakness: 'DISPLAYS OF TOUGHNESS',
     color: 0x795548,
   },
   {
@@ -199,6 +218,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Cool, rhythmic speech pattern. Relaxed but sharp. Fair prices, good vibes.',
     greeting: 'Bristol-Myers, baby. Smooth and steady, just like jazz.',
     spreadStyle: 'normal',
+    weakness: 'MUSIC AND JAZZ',
     color: 0x4527a0,
   },
   {
@@ -209,6 +229,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Old-school, superstitious. Checks his horoscope before trading. Normal spreads, unpredictable moods.',
     greeting: 'Abbott Labs. The stars say today is good for pharma...',
     spreadStyle: 'normal',
+    weakness: 'SUPERSTITIONS AND LUCK',
     color: 0x00695c,
   },
   {
@@ -219,6 +240,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Wild, unpredictable. Prices swing with his mood. Sometimes amazing deals, sometimes terrible. High risk, high reward.',
     greeting: 'XEROX! You feeling lucky today?! BECAUSE I AM!',
     spreadStyle: 'wide',
+    weakness: 'THRILLS AND DARES',
     color: 0xb71c1c,
   },
   {
@@ -229,6 +251,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Old money, prep school accent. Thinks he\'s better than everyone. Normal spreads, condescending service.',
     greeting: 'Emerson Electric. A gentleman\'s stock for a gentleman\'s portfolio.',
     spreadStyle: 'normal',
+    weakness: 'SOCIAL STATUS AND PEDIGREE',
     color: 0xffffff,
   },
   {
@@ -239,6 +262,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'Motherly, warm. Gives good prices to "nice kids." Scolds reckless traders. Always has advice.',
     greeting: 'Colgate, sweetheart. You eating enough? You look thin.',
     spreadStyle: 'normal',
+    weakness: 'FAMILY AND HOME COOKING',
     color: 0x6d4c41,
   },
   {
@@ -249,6 +273,7 @@ export const TRADERS: TraderDef[] = [
     personality: 'The floor\'s unofficial loan shark. Doesn\'t trade stocks. Shows up when you\'re in debt.',
     greeting: 'Hey pal. I hear you\'re having some... financial difficulties.',
     spreadStyle: 'wide',
+    weakness: 'NONE',
     color: 0x212121,
   },
 ]
