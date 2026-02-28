@@ -16,7 +16,8 @@ export class MorningScene extends Phaser.Scene {
       this.scene.stop('TradingUIScene')
     }
 
-    // Play morning music (looped from 0:27 with crossfade)
+    // Stop any carry-over music (e.g. title screen) then start fresh
+    this.sound.stopAll()
     this.music = playLoopedMusic(this, 'music-morning')
 
     // Fill in nextDayPrice for previous day's NPC interactions

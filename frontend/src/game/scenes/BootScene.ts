@@ -89,6 +89,7 @@ export class BootScene extends Phaser.Scene {
 
     // Video backgrounds
     this.load.video('gridpink', 'game-assets/video/gridpink.mp4', true)
+    this.load.video('home-video', 'game-assets/video/Home.mp4', true)
 
     // Market data JSON
     this.load.json('market-data', '/game-assets/data/market-data.json')
@@ -102,8 +103,8 @@ export class BootScene extends Phaser.Scene {
     // All traders now have sprite images — no placeholder generation needed
 
 
-    // Transition to player setup scene
-    this.scene.start('PlayerSetupScene')
+    // Transition to title screen
+    this.scene.start('TitleScene')
   }
 
 }
