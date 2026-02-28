@@ -4,6 +4,7 @@ import { tradingSystem } from '../systems/TradingSystem'
 import { TRADERS, getTraderByTicker } from '../data/traders'
 import type { TraderDef } from '../types'
 import { TradingUIScene } from './TradingUIScene'
+import { playLoopedMusic } from '../systems/MusicManager'
 
 // NPC positions on the trading floor (1408x768)
 // Clustered around the pit and on the open floor, away from edge desks
@@ -26,7 +27,6 @@ const NPC_POSITIONS: Record<string, { x: number; y: number }> = {
   eddie: { x: 1050, y: 450 },
 
   // Around the pit walkway
-  frank: { x: 700, y: 310 },
   santos: { x: 580, y: 410 },
   ricky: { x: 830, y: 390 },
   nancy: { x: 720, y: 470 },
@@ -68,7 +68,7 @@ export class TradingFloorScene extends Phaser.Scene {
   private uiScene!: TradingUIScene
   private dayEnded = false
   private countdownActive = true
-  private tradingMusic!: Phaser.Sound.BaseSound
+  private tradingMusic!: Phaser.Sound.WebAudioSound
 
   // Ticker search
   private tickerSearchInput: HTMLInputElement | null = null
@@ -217,7 +217,6 @@ export class TradingFloorScene extends Phaser.Scene {
   }
 
   private runCountdown(): void {
-    const { width, height } = this.scale
     const cam = this.cameras.main
 
     // Full-screen overlay fixed to camera
@@ -225,7 +224,7 @@ export class TradingFloorScene extends Phaser.Scene {
     overlay.setScrollFactor(0).setDepth(9000)
 
     const countText = this.add
-      .text(cam.width / 2, cam.height / 2, '5', {
+      .text(cam.width / 2, cam.height / 2, '3', {
         fontSize: '160px',
         fontFamily: '"Press Start 2P"',
         color: '#facc15',
@@ -244,7 +243,7 @@ export class TradingFloorScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(9001)
 
-    let remaining = 5
+    let remaining = 3
 
     // Initial beep
     this.playBeep(440, 0.2)
@@ -294,9 +293,8 @@ export class TradingFloorScene extends Phaser.Scene {
                   loop: true,
                 })
 
-                // Start trading music
-                this.tradingMusic = this.sound.add('music-trading', { loop: true, volume: 0.5 })
-                this.tradingMusic.play()
+                // Start trading music (looped from 0:27 with crossfade)
+                this.tradingMusic = playLoopedMusic(this, 'music-trading')
               },
             })
           })
@@ -341,7 +339,6 @@ export class TradingFloorScene extends Phaser.Scene {
       maddog:    { scale: 0.078, topOff: -419 },
       whitey:    { scale: 0.094, topOff: -349 },
       mama:      { scale: 0.074, topOff: -370 },
-      frank:     { scale: 0.079, topOff: -337 },
     }
 
     for (const trader of TRADERS) {

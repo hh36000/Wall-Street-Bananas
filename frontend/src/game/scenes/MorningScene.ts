@@ -1,9 +1,10 @@
 import Phaser from 'phaser'
 import { gameState } from '../GameState'
 import { marketData } from '../systems/MarketDataEngine'
+import { playLoopedMusic } from '../systems/MusicManager'
 
 export class MorningScene extends Phaser.Scene {
-  private music!: Phaser.Sound.BaseSound
+  private music!: Phaser.Sound.WebAudioSound
 
   constructor() {
     super('MorningScene')
@@ -14,13 +15,8 @@ export class MorningScene extends Phaser.Scene {
       this.scene.stop('TradingUIScene')
     }
 
-    // Play morning music (looped)
-    if (!this.sound.get('music-morning')?.isPlaying) {
-      this.music = this.sound.add('music-morning', { loop: true, volume: 0.5 })
-      this.music.play()
-    } else {
-      this.music = this.sound.get('music-morning')!
-    }
+    // Play morning music (looped from 0:27 with crossfade)
+    this.music = playLoopedMusic(this, 'music-morning')
 
     // Fill in nextDayPrice for previous day's NPC interactions
     if (gameState.dayNumber > 1) {

@@ -76,7 +76,7 @@ export class BootScene extends Phaser.Scene {
       'bigal', 'professor', 'donna', 'quietmike', 'tommy', 'santos',
       'ricky', 'eddie', 'sal', 'paulie', 'tony', 'nancy', 'bernie',
       'charlie', 'diane', 'bobby', 'tina', 'jerome', 'gus', 'maddog',
-      'whitey', 'frank',
+      'whitey',
     ]
     for (const name of otherSprites) {
       this.load.image(name, `/game-assets/sprites/${name}.png`)

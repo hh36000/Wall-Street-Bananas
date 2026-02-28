@@ -2,9 +2,10 @@ import Phaser from 'phaser'
 import { gameState } from '../GameState'
 import { marketData } from '../systems/MarketDataEngine'
 import { tradingSystem } from '../systems/TradingSystem'
+import { playLoopedMusic } from '../systems/MusicManager'
 
 export class DaySummaryScene extends Phaser.Scene {
-  private music!: Phaser.Sound.BaseSound
+  private music!: Phaser.Sound.WebAudioSound
 
   constructor() {
     super('DaySummaryScene')
@@ -15,9 +16,8 @@ export class DaySummaryScene extends Phaser.Scene {
       this.scene.stop('TradingUIScene')
     }
 
-    // Play summary music (looped)
-    this.music = this.sound.add('music-summary', { loop: true, volume: 0.5 })
-    this.music.play()
+    // Play summary music (looped from 0:27 with crossfade)
+    this.music = playLoopedMusic(this, 'music-summary')
 
     gameState.phase = 'summary'
 

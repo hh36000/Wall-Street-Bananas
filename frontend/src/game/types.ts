@@ -42,7 +42,7 @@ export interface TraderDef {
   id: string
   name: string
   nickname: string
-  ticker: string | null // null for non-trading NPCs like Frank
+  ticker: string
   personality: string
   greeting: string
   spreadStyle: SpreadStyle

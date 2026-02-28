@@ -265,20 +265,9 @@ export const TRADERS: TraderDef[] = [
     weakness: 'FAMILY AND HOME COOKING',
     color: 0x6d4c41,
   },
-  {
-    id: 'frank',
-    name: 'Frank "Five Fingers" Morano',
-    nickname: 'Frankie Five Fingers',
-    ticker: null,
-    personality: 'The floor\'s unofficial loan shark. Doesn\'t trade stocks. Shows up when you\'re in debt.',
-    greeting: 'Hey pal. I hear you\'re having some... financial difficulties.',
-    spreadStyle: 'wide',
-    weakness: 'NONE',
-    color: 0x212121,
-  },
 ]
 
-export const TRADING_NPCS = TRADERS.filter((t) => t.ticker !== null)
+export const TRADING_NPCS = TRADERS
 
 export function getTraderById(id: string): TraderDef | undefined {
   return TRADERS.find((t) => t.id === id)
