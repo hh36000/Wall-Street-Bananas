@@ -16,281 +16,165 @@ export class DaySummaryScene extends Phaser.Scene {
     gameState.phase = 'summary'
 
     const { width, height } = this.scale
+    const cx = width / 2
 
-    // End of day settlement
     const result = tradingSystem.endOfDay()
 
-    // Dark background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a1a)
-
-    // Title
-    this.add
-      .text(width / 2, 30, 'DAY SUMMARY', {
-        fontSize: '24px',
-        fontFamily: 'monospace',
-        color: '#facc15',
+    const fmt = (v: number, decimals = 2) =>
+      Math.abs(v).toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
       })
-      .setOrigin(0.5)
 
-    // Date and day
+    // Dark background
+    this.add.rectangle(cx, height / 2, width, height, 0x0a0a1a)
+
+    // ─── Date / Day ───
     this.add
-      .text(width / 2, 60, `${marketData.formatDate(gameState.currentDate)} — Day ${gameState.dayNumber}`, {
-        fontSize: '12px',
+      .text(cx, 30, `${marketData.formatDate(gameState.currentDate)}  —  Day ${gameState.dayNumber}`, {
+        fontSize: '13px',
         fontFamily: 'monospace',
         color: '#94a3b8',
       })
       .setOrigin(0.5)
 
-    // Separator
-    this.add
-      .text(width / 2, 80, '─'.repeat(50), {
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        color: '#334155',
-      })
-      .setOrigin(0.5)
+    // ─── P&L ───
+    const netColor = result.netPnl >= 0 ? '#4ade80' : '#f87171'
+    const netSign = result.netPnl >= 0 ? '+' : '-'
 
-    // Trades list
-    let y = 100
-    this.add.text(40, y, "TODAY'S TRADES", {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#e2e8f0',
-    })
-    y += 22
+    this.add.text(cx, 60, `${netSign}$${fmt(result.netPnl)}`, { fontSize: '36px', fontFamily: 'monospace', color: netColor }).setOrigin(0.5)
+
+    const grade = this.getPerformanceGrade(result.netPnl, gameState.todayTrades.length)
+    this.add.text(cx, 96, grade.label, { fontSize: '11px', fontFamily: 'monospace', color: grade.color }).setOrigin(0.5)
+
+    // Realized / Unrealized line
+    const realSign = result.realizedPnl >= 0 ? '+' : '-'
+    const unrealSign = result.unrealizedPnl >= 0 ? '+' : '-'
+    this.add.text(cx, 118, `realized ${realSign}$${fmt(result.realizedPnl)}  ·  unrealized ${unrealSign}$${fmt(result.unrealizedPnl)}`, {
+      fontSize: '9px', fontFamily: 'monospace', color: '#475569',
+    }).setOrigin(0.5)
+
+    // Capital line
+    const capColor = gameState.capital >= 0 ? '#4ade80' : '#f87171'
+    this.add.text(cx, 138, `Capital: $${fmt(gameState.capital)}`, { fontSize: '12px', fontFamily: 'monospace', color: capColor }).setOrigin(0.5)
+
+    // ─── Thin separator ───
+    this.add.rectangle(cx, 158, 500, 1, 0x1e293b)
+
+    // ─── Trades ───
+    let y = 172
 
     if (gameState.todayTrades.length === 0) {
-      this.add.text(40, y, 'No trades today.', {
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        color: '#64748b',
-      })
-      y += 18
+      this.add.text(cx, y, 'No trades today', { fontSize: '10px', fontFamily: 'monospace', color: '#334155' }).setOrigin(0.5)
+      y += 20
     } else {
-      // Header
-      this.add.text(40, y, 'Side    Stock   Notional   Shares   Price      NPC', {
-        fontSize: '9px',
-        fontFamily: 'monospace',
-        color: '#64748b',
-      })
+      this.add.text(cx, y, `TRADES (${gameState.todayTrades.length})`, { fontSize: '9px', fontFamily: 'monospace', color: '#64748b' }).setOrigin(0.5)
       y += 16
 
-      const maxVisible = 8
+      const maxVisible = 6
       const trades = gameState.todayTrades.slice(0, maxVisible)
       for (const trade of trades) {
         const color = trade.side === 'BUY' ? '#4ade80' : '#f87171'
-        const line = `${trade.side.padEnd(7)} ${trade.ticker.padEnd(7)} $${trade.notional.toLocaleString().padEnd(9)} ${trade.quantity.toFixed(1).padEnd(8)} $${trade.price.toFixed(2).padEnd(10)} ${trade.npcName}`
-        this.add.text(40, y, line, {
-          fontSize: '9px',
-          fontFamily: 'monospace',
-          color,
-        })
-        y += 15
+        const line = `${trade.side}  ${trade.ticker}  $${trade.notional.toLocaleString()}  ${trade.quantity.toFixed(1)} @ $${trade.price.toFixed(2)}  ${trade.npcName}`
+        this.add.text(cx, y, line, { fontSize: '9px', fontFamily: 'monospace', color }).setOrigin(0.5)
+        y += 14
       }
-
       if (gameState.todayTrades.length > maxVisible) {
-        this.add.text(40, y, `... and ${gameState.todayTrades.length - maxVisible} more trades`, {
-          fontSize: '9px',
-          fontFamily: 'monospace',
-          color: '#64748b',
-        })
-        y += 15
+        this.add.text(cx, y, `+${gameState.todayTrades.length - maxVisible} more`, { fontSize: '8px', fontFamily: 'monospace', color: '#334155' }).setOrigin(0.5)
+        y += 14
       }
     }
 
-    // P&L Section
-    y += 15
-    this.add
-      .text(width / 2, y, '─'.repeat(50), {
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        color: '#334155',
-      })
-      .setOrigin(0.5)
-    y += 18
-
-    // Realized P&L
-    const realColor = result.realizedPnl >= 0 ? '#4ade80' : '#f87171'
-    const realSign = result.realizedPnl >= 0 ? '+' : ''
-    this.add.text(40, y, `Realized P&L:     ${realSign}$${result.realizedPnl.toFixed(2)}`, {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: realColor,
-    })
-    y += 20
-
-    // Unrealized P&L
-    const unrealColor = result.unrealizedPnl >= 0 ? '#4ade80' : '#f87171'
-    const unrealSign = result.unrealizedPnl >= 0 ? '+' : ''
-    this.add.text(40, y, `Unrealized P&L:   ${unrealSign}$${result.unrealizedPnl.toFixed(2)}`, {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: unrealColor,
-    })
-    y += 20
-
-    // Net P&L
-    const netColor = result.netPnl >= 0 ? '#4ade80' : '#f87171'
-    const netSign = result.netPnl >= 0 ? '+' : ''
-    this.add.text(40, y, `Net P&L:          ${netSign}$${result.netPnl.toFixed(2)}`, {
-      fontSize: '13px',
-      fontFamily: 'monospace',
-      color: netColor,
-    })
-    y += 25
-
-    // Separator
-    this.add
-      .text(width / 2, y, '─'.repeat(50), {
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        color: '#334155',
-      })
-      .setOrigin(0.5)
-    y += 18
-
-    // Total capital
-    const capColor = gameState.capital >= 0 ? '#4ade80' : '#f87171'
-    this.add.text(40, y, `Total Capital:    $${gameState.capital.toFixed(2)}`, {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      color: capColor,
-    })
-    y += 25
-
-    // Open positions
+    // ─── Open Positions ───
     if (gameState.positions.size > 0) {
-      this.add.text(40, y, 'Open Positions:', {
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        color: '#94a3b8',
-      })
+      this.add.rectangle(cx, y + 6, 500, 1, 0x1e293b)
       y += 18
+
+      this.add.text(cx, y, `POSITIONS (${gameState.positions.size})`, { fontSize: '9px', fontFamily: 'monospace', color: '#64748b' }).setOrigin(0.5)
+      y += 16
+
       for (const pos of gameState.positions.values()) {
         const currentPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
-        const marketValue = pos.quantity * currentPrice
         const posPnl = (currentPrice - pos.avgPrice) * pos.quantity
         const posColor = posPnl >= 0 ? '#4ade80' : '#f87171'
-        const side = pos.quantity >= 0 ? 'LONG' : 'SHORT'
-        const mvSign = marketValue >= 0 ? '+' : '-'
-        this.add.text(
-          40,
-          y,
-          `  ${pos.ticker}: ${side} ${Math.abs(pos.quantity).toFixed(1)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} (${posPnl >= 0 ? '+' : ''}$${posPnl.toFixed(2)})`,
-          {
-            fontSize: '9px',
-            fontFamily: 'monospace',
-            color: posColor,
-          }
-        )
-        y += 15
+        const side = pos.quantity >= 0 ? 'L' : 'S'
+        const pnlSign = posPnl >= 0 ? '+' : '-'
+
+        const line = `${pos.ticker} ${side} ${Math.abs(pos.quantity).toFixed(1)} @ $${pos.avgPrice.toFixed(2)}  →  $${currentPrice.toFixed(2)}  ${pnlSign}$${fmt(Math.abs(posPnl))}`
+        this.add.text(cx, y, line, { fontSize: '9px', fontFamily: 'monospace', color: posColor }).setOrigin(0.5)
+        y += 14
       }
     }
 
-    // Debt warning
+    // ─── Debt Warning ───
     if (gameState.isInDebt) {
-      y += 10
+      y += 12
+      this.add.rectangle(cx, y + 8, 460, 26, 0x7f1d1d, 0.5)
       this.add
-        .text(
-          width / 2,
-          y,
-          `WARNING: You are $${Math.abs(gameState.capital).toFixed(2)} in debt. Day ${gameState.consecutiveDaysInDebt} of 3.`,
-          {
-            fontSize: '12px',
-            fontFamily: 'monospace',
-            color: '#f87171',
-          }
-        )
+        .text(cx, y + 8, `⚠ $${fmt(Math.abs(gameState.capital))} in debt — Day ${gameState.consecutiveDaysInDebt}/3`, {
+          fontSize: '10px', fontFamily: 'monospace', color: '#fca5a5',
+        })
         .setOrigin(0.5)
-      y += 20
+      y += 30
     }
 
-    // Game Over check
+    // ─── Game Over ───
     if (gameState.isGameOver) {
       this.showGameOver(y)
       return
     }
 
-    // Next Day button
-    const btnY = Math.max(y + 30, height - 60)
-    const btn = this.add.rectangle(width / 2, btnY, 200, 40, 0x2563eb)
+    // ─── Next Day Button ───
+    const btnY = Math.max(y + 30, height - 50)
+    const btn = this.add.rectangle(cx, btnY, 180, 36, 0x2563eb)
     btn.setInteractive({ useHandCursor: true })
 
-    this.add
-      .text(width / 2, btnY, 'NEXT DAY (N)', {
-        fontSize: '16px',
-        fontFamily: 'monospace',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
+    this.add.text(cx, btnY, 'NEXT DAY (N)', { fontSize: '12px', fontFamily: 'monospace', color: '#ffffff' }).setOrigin(0.5)
 
     btn.on('pointerover', () => btn.setFillStyle(0x3b82f6))
     btn.on('pointerout', () => btn.setFillStyle(0x2563eb))
-    btn.on('pointerdown', () => {
-      this.advanceToNextDay()
-    })
+    btn.on('pointerdown', () => this.advanceToNextDay())
 
-    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.N).on('down', () => {
-      this.advanceToNextDay()
-    })
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.N).on('down', () => this.advanceToNextDay())
+  }
+
+  private getPerformanceGrade(netPnl: number, tradeCount: number): { label: string; color: string } {
+    if (tradeCount === 0) return { label: 'IDLE — no trades', color: '#475569' }
+    if (netPnl > 5000) return { label: 'LEGENDARY', color: '#facc15' }
+    if (netPnl > 1000) return { label: 'KILLING IT', color: '#4ade80' }
+    if (netPnl > 100) return { label: 'SOLID DAY', color: '#4ade80' }
+    if (netPnl > 0) return { label: 'IN THE GREEN', color: '#86efac' }
+    if (netPnl > -100) return { label: 'SCRATCHED', color: '#fbbf24' }
+    if (netPnl > -1000) return { label: 'ROUGH DAY', color: '#fb923c' }
+    if (netPnl > -5000) return { label: 'BLEEDING', color: '#f87171' }
+    return { label: 'CATASTROPHIC', color: '#ef4444' }
   }
 
   private showGameOver(startY: number): void {
     const { width } = this.scale
+    const cx = width / 2
 
-    this.add
-      .text(width / 2, startY + 10, 'GAME OVER', {
-        fontSize: '28px',
-        fontFamily: 'monospace',
-        color: '#ef4444',
-      })
-      .setOrigin(0.5)
+    this.add.text(cx, startY + 10, 'GAME OVER', { fontSize: '24px', fontFamily: '"Press Start 2P"', color: '#ef4444' }).setOrigin(0.5)
+    this.add.text(cx, startY + 45, 'The mob sends its regards.', { fontSize: '11px', fontFamily: 'monospace', color: '#f87171' }).setOrigin(0.5)
 
-    this.add
-      .text(width / 2, startY + 45, 'The mob sends its regards.', {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#f87171',
-      })
-      .setOrigin(0.5)
-
-    // Final stats
-    let sy = startY + 75
-    const peakCapital = Math.max(
-      gameState.startingCapital,
-      ...gameState.dayResults.map((d) => d.endingCapital)
-    )
-    const totalTrades = gameState.allTrades.length
+    let sy = startY + 70
+    const peakCapital = Math.max(gameState.startingCapital, ...gameState.dayResults.map((d) => d.endingCapital))
 
     const stats = [
       `Days Survived: ${gameState.dayNumber}`,
       `Peak Capital: $${peakCapital.toFixed(2)}`,
-      `Total Trades: ${totalTrades}`,
+      `Total Trades: ${gameState.allTrades.length}`,
       `Final Capital: $${gameState.capital.toFixed(2)}`,
     ]
 
     for (const stat of stats) {
-      this.add
-        .text(width / 2, sy, stat, {
-          fontSize: '11px',
-          fontFamily: 'monospace',
-          color: '#94a3b8',
-        })
-        .setOrigin(0.5)
-      sy += 20
+      this.add.text(cx, sy, stat, { fontSize: '10px', fontFamily: 'monospace', color: '#94a3b8' }).setOrigin(0.5)
+      sy += 18
     }
 
-    // Try Again button
-    const btn = this.add.rectangle(width / 2, sy + 20, 200, 40, 0xdc2626)
+    const btn = this.add.rectangle(cx, sy + 16, 180, 36, 0xdc2626)
     btn.setInteractive({ useHandCursor: true })
-
-    this.add
-      .text(width / 2, sy + 20, 'TRY AGAIN', {
-        fontSize: '16px',
-        fontFamily: 'monospace',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
+    this.add.text(cx, sy + 16, 'TRY AGAIN', { fontSize: '12px', fontFamily: 'monospace', color: '#ffffff' }).setOrigin(0.5)
 
     btn.on('pointerover', () => btn.setFillStyle(0xef4444))
     btn.on('pointerout', () => btn.setFillStyle(0xdc2626))
@@ -306,7 +190,6 @@ export class DaySummaryScene extends Phaser.Scene {
     gameState.dayNumber++
     const nextDate = marketData.advanceDay()
     if (!nextDate) {
-      // Ran out of market data — you win
       gameState.isGameOver = true
       this.scene.restart()
       return
