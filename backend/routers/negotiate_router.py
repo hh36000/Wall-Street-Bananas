@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import random
 from fastapi import APIRouter
 from pydantic import BaseModel
 from google import genai
@@ -51,7 +52,7 @@ SYSTEM_PROMPT_TEMPLATE = """You are {trader_name}, a stock trader on the 1980s W
 Your personality: {personality}
 Today {ticker} is {current_bid}/{current_ask}.
 The user will try and negotiate with you.
-You are [NORMAL] to SWAY and will never make a trade more than [1%] from your bid/ask open. It will take a convincing side deal to move your price.
+You are [NORMAL] to SWAY and will never make a trade more than [{max_move_pct}%] from your bid/ask open. It will take a convincing side deal to move your price.
 Your weakness is [{weakness}]. You will be more likely to accept a deal if the user offers a side deal related to [{weakness}].
 
 {relationship_history}
@@ -78,6 +79,8 @@ async def negotiate(req: NegotiateRequest):
     if req.relationship_history:
         relationship_section = f"\nYOUR HISTORY WITH THIS TRADER:\n{req.relationship_history}\n"
 
+    max_move_pct = random.randint(1, 5)
+
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         trader_name=req.trader_name,
         personality=req.trader_personality,
@@ -85,6 +88,7 @@ async def negotiate(req: NegotiateRequest):
         current_bid=f"${req.current_bid:.2f}",
         current_ask=f"${req.current_ask:.2f}",
         weakness=req.trader_weakness,
+        max_move_pct=max_move_pct,
         relationship_history=relationship_section,
     )
 
@@ -124,23 +128,19 @@ async def negotiate(req: NegotiateRequest):
 
         result = json.loads(response.text)
 
-        # Clamp bid/ask to within 1% of original
-        max_bid_move = req.current_bid * 0.01
-        max_ask_move = req.current_ask * 0.01
+        updated_bid = result["updated_bid"]
+        updated_ask = result["updated_ask"]
 
-        clamped_bid = max(req.current_bid - max_bid_move, min(req.current_bid + max_bid_move, result["updated_bid"]))
-        clamped_ask = max(req.current_ask - max_ask_move, min(req.current_ask + max_ask_move, result["updated_ask"]))
-
-        # Ensure bid < ask
-        if clamped_bid >= clamped_ask:
-            clamped_bid = req.current_bid
-            clamped_ask = req.current_ask
+        # Ensure bid < ask, reset to original if invalid
+        if updated_bid >= updated_ask:
+            updated_bid = req.current_bid
+            updated_ask = req.current_ask
 
         return NegotiateResponse(
             npc_message=result["npc_message"],
             trade_accepted=result["trade_accepted"],
-            updated_bid=round(clamped_bid, 2),
-            updated_ask=round(clamped_ask, 2),
+            updated_bid=round(updated_bid, 2),
+            updated_ask=round(updated_ask, 2),
         )
 
     except Exception as e:

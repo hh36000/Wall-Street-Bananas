@@ -4,6 +4,7 @@ import { tradingSystem } from '../systems/TradingSystem'
 import { npcManager } from '../systems/NPCManager'
 import { marketData } from '../systems/MarketDataEngine'
 import { negotiate, buildRelationshipHistory } from '../../services/api'
+import { TRADING_NPCS } from '../data/traders'
 import type { TraderDef, NPCQuote, ChatMessage, TradeRecord } from '../types'
 
 export class TradingUIScene extends Phaser.Scene {
@@ -46,6 +47,10 @@ export class TradingUIScene extends Phaser.Scene {
   private originalBid = 0
   private originalAsk = 0
 
+  // Ticker scroller
+  private tickerScrollContainer!: Phaser.GameObjects.Container
+  private tickerScrollWidth = 0
+
   constructor() {
     super('TradingUIScene')
   }
@@ -53,6 +58,7 @@ export class TradingUIScene extends Phaser.Scene {
   create(): void {
     this.buildTradeDialog()
     this.buildHUD()
+    this.buildTickerScroller()
 
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
     this.buyKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
@@ -922,6 +928,76 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer.add(endDayLabel)
 
     this.updateHUD()
+  }
+
+  private buildTickerScroller(): void {
+    const cw = this.scale.width
+    const scrollerY = 72
+    const scrollerH = 20
+
+    // Background bar
+    const scrollerBg = this.add.rectangle(cw / 2, scrollerY + scrollerH / 2, cw, scrollerH, 0x000000, 0.92)
+    scrollerBg.setOrigin(0.5)
+    this.hudContainer.add(scrollerBg)
+
+    // Top separator
+    const line = this.add.rectangle(cw / 2, scrollerY, cw, 1, 0x334155)
+    line.setOrigin(0.5, 0.5)
+    this.hudContainer.add(line)
+
+    // Build ticker items — start flush left, two copies for seamless looping
+    this.tickerScrollContainer = this.add.container(0, scrollerY + scrollerH / 2)
+    this.tickerScrollContainer.setDepth(500)
+
+    const gap = 40
+    let xPos = 0
+
+    for (let copy = 0; copy < 2; copy++) {
+      for (const trader of TRADING_NPCS) {
+        const mid = marketData.getPrice(trader.ticker!)
+        let isUp: boolean
+        if (gameState.dayNumber <= 1) {
+          // Day 1: no previous price data, randomize
+          isUp = Math.random() > 0.5
+        } else {
+          const change = marketData.getPriceChange(trader.ticker!)
+          isUp = change ? change.change >= 0 : true
+        }
+        const color = isUp ? '#4ade80' : '#f87171'
+        const arrow = isUp ? '\u25B2' : '\u25BC'
+
+        const entry = this.add
+          .text(xPos, 0, `${trader.ticker}  $${mid?.toFixed(2) ?? '?'} ${arrow}`, {
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            color,
+          })
+          .setOrigin(0, 0.5)
+
+        this.tickerScrollContainer.add(entry)
+        xPos += entry.width + gap
+      }
+
+      // Record width of one full set after first copy
+      if (copy === 0) this.tickerScrollWidth = xPos
+    }
+
+    // Mask to clip to screen width
+    const maskShape = this.make.graphics({})
+    maskShape.fillRect(0, scrollerY, cw, scrollerH)
+    this.tickerScrollContainer.setMask(maskShape.createGeometryMask())
+  }
+
+  update(_time: number, delta: number): void {
+    if (!this.tickerScrollContainer) return
+
+    const speed = 60 // pixels per second
+    this.tickerScrollContainer.x -= speed * (delta / 1000)
+
+    // When first copy scrolls fully off, reset for seamless loop
+    if (this.tickerScrollContainer.x <= -this.tickerScrollWidth) {
+      this.tickerScrollContainer.x += this.tickerScrollWidth
+    }
   }
 
   private updateHUD(): void {

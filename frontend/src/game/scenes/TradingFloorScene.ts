@@ -73,6 +73,10 @@ export class TradingFloorScene extends Phaser.Scene {
   private tickerSearchOverlay: Phaser.GameObjects.Container | null = null
   private tickerSearchKeyHandler: ((e: KeyboardEvent) => void) | null = null
 
+  // NPC labels + weakness toggle
+  private npcLabels: Map<string, Phaser.GameObjects.Text> = new Map()
+  private showingWeaknesses = false
+
   constructor() {
     super('TradingFloorScene')
   }
@@ -172,6 +176,10 @@ export class TradingFloorScene extends Phaser.Scene {
         e.preventDefault()
         this.endTradingDay()
       }
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        this.toggleWeaknessLabels()
+      }
     }
     window.addEventListener('keydown', this.tickerSearchKeyHandler)
 
@@ -255,6 +263,7 @@ export class TradingFloorScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 1)
       container.add(label)
+      this.npcLabels.set(trader.id, label)
 
       this.physics.add.existing(container)
       const body = container.body as Phaser.Physics.Arcade.Body
@@ -389,6 +398,24 @@ export class TradingFloorScene extends Phaser.Scene {
     document.body.appendChild(input)
     this.tickerSearchInput = input
     input.focus()
+  }
+
+  private toggleWeaknessLabels(): void {
+    this.showingWeaknesses = !this.showingWeaknesses
+    for (const [id, label] of this.npcLabels) {
+      const trader = this.npcTraders.get(id)
+      if (!trader) continue
+      if (this.showingWeaknesses) {
+        label.setText(trader.weakness)
+        label.setColor('#c084fc')
+      } else {
+        const text = trader.ticker
+          ? `${trader.nickname}\n${trader.ticker}`
+          : trader.nickname
+        label.setText(text)
+        label.setColor('#facc15')
+      }
+    }
   }
 
   private closeTickerSearch(): void {
