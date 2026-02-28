@@ -3,9 +3,9 @@ import { marketData } from './MarketDataEngine'
 
 // Half-spread as a fraction of current price (percentage-based)
 const SPREAD_PCT_MAP = {
-  tight: 0.0025,  // 0.25% half-spread → ~0.5% round-trip
-  normal: 0.005,  // 0.5%  half-spread → ~1% round-trip
-  wide: 0.01,     // 1.0%  half-spread → ~2% round-trip
+  tight: 0.00125, // 0.125% half-spread → ~0.25% round-trip
+  normal: 0.0025, // 0.25%  half-spread → ~0.5% round-trip
+  wide: 0.005,    // 0.5%   half-spread → ~1% round-trip
 } as const
 
 export class NPCManager {

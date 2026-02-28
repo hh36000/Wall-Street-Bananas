@@ -418,7 +418,7 @@ export class TradingUIScene extends Phaser.Scene {
     const ticker = trader.ticker ?? '—'
     const todayPrice = marketData.getPrice(ticker)
     const tomorrowPrice = marketData.getNextPrice(ticker)
-    const spreadPct = { tight: '0.5%', normal: '1%', wide: '2%' }[trader.spreadStyle]
+    const spreadPct = { tight: '0.25%', normal: '0.5%', wide: '1%' }[trader.spreadStyle]
 
     const lines = [
       `${trader.name}  |  ${ticker}`,
