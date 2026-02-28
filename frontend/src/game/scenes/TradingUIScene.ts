@@ -140,6 +140,7 @@ export class TradingUIScene extends Phaser.Scene {
 
     this.dialogTexts.get('name')!.setText(`${trader.nickname} — ${trader.name}`)
     this.dialogTexts.get('quote')!.setText(npcManager.formatQuote(trader, this.activeQuote))
+    this.dialogTexts.get('weakness')!.setText(`WEAKNESS: ${trader.weakness}`)
     this.dialogTexts.get('result')!.setText('')
 
     // Reset cheat + history overlays
@@ -248,11 +249,23 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(quoteText)
     this.dialogTexts.set('quote', quoteText)
 
+    // Trader weakness - prominent display
+    const weaknessText = this.add
+      .text(0, -dh / 2 + 85, '', {
+        fontSize: '16px',
+        fontFamily: 'monospace',
+        color: '#f472b6',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+    this.dialogContainer.add(weaknessText)
+    this.dialogTexts.set('weakness', weaknessText)
+
     // Chat area - masked scrollable region
     const chatAreaX = -dw / 2 + 25
-    const chatAreaY = -dh / 2 + 80
+    const chatAreaY = -dh / 2 + 110
     const chatAreaW = dw - 50
-    const chatAreaH = 210
+    const chatAreaH = 180
 
     // Chat background
     const chatBg = this.add.rectangle(0, chatAreaY + chatAreaH / 2, chatAreaW, chatAreaH, 0x0f0f23, 0.9)
@@ -488,12 +501,12 @@ export class TradingUIScene extends Phaser.Scene {
 
     const dw = 700
     const dh = 500
-    const chatAreaH = 210
+    const chatAreaH = 180
     const chatAreaW = dw - 50
 
     // Game-space coordinates (origin = top-left of game canvas)
     const gameX = (this.scale.width - dw) / 2 + 25
-    const gameY = (this.scale.height - dh) / 2 + 80 + chatAreaH + 10
+    const gameY = (this.scale.height - dh) / 2 + 110 + chatAreaH + 10
     const gameW = chatAreaW - 70
     const gameH = 26
 
@@ -523,7 +536,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.chatMessages = []
     // Reset container to original position (dialog-local coords)
     const dh = 500
-    this.chatContainer.setPosition(this.chatContainer.x, -dh / 2 + 80 + 5)
+    this.chatContainer.setPosition(this.chatContainer.x, -dh / 2 + 110 + 5)
   }
 
   private addChatMessage(role: 'npc' | 'user', text: string): void {
@@ -552,7 +565,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.chatMessages.push(msgText)
 
     // Auto-scroll: shift container up if messages overflow
-    const chatAreaH = 210
+    const chatAreaH = 180
     const totalHeight = yPos + msgText.height
     if (totalHeight > chatAreaH - 10) {
       const overflow = totalHeight - (chatAreaH - 10)

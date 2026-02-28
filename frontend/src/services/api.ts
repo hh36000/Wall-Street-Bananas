@@ -45,7 +45,7 @@ export interface NegotiateResponse {
 
 export async function negotiate(req: NegotiateRequest): Promise<NegotiateResponse> {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 10000)
+  const timeout = setTimeout(() => controller.abort(), 60000)
 
   try {
     const response = await fetch(`${API_BASE_URL}/negotiate`, {

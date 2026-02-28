@@ -86,6 +86,9 @@ htmlcov/
 *.swp
 *.swo
 
+# Game saves
+saves/
+
 # Misc
 *.pyc
 *.pyo

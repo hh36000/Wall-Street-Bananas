@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import random
+import asyncio
 from fastapi import APIRouter
 from pydantic import BaseModel
 from google import genai
@@ -54,14 +55,11 @@ Today {ticker} is {current_bid}/{current_ask} (bid/offer).
 You are a market maker. Your BID is where you BUY from the user. Your OFFER (ask) is where you SELL to the user.
 If the user wants to buy at a lower price, you move your OFFER (updated_ask) down. If the user wants to sell at a higher price, you move your BID (updated_bid) up.
 The user will try and negotiate with you.
-You are [NORMAL] to SWAY and will never make a trade more than [{max_move_pct}%] from your bid/ask open. It will take a convincing side deal to move your price.
 Your weakness is [{weakness}]. You will be more likely to accept a deal if the user offers a side deal related to [{weakness}].
 
 {relationship_history}
 
 Consider your full history with this trader when deciding how to respond, how to price your market, and whether to accept trades. If they gave you good advice in the past and stocks moved the way they said, trust them more. If they misled you, be skeptical. Relationships can heal over time.
-
-CRITICAL: When you agree to move your price, you MUST update the updated_bid and updated_ask fields to reflect the new price. If (for example) you say "done at 3.05" then updated_ask MUST be 3.05. Your message and your prices must always match. Do not say you moved your price without actually changing the numbers.
 
 Stay in character. Keep responses short (1-3 sentences). Be entertaining."""
 
@@ -69,10 +67,10 @@ RESPONSE_SCHEMA = genai.types.Schema(
     type=genai.types.Type.OBJECT,
     required=["npc_message", "trade_accepted", "updated_bid", "updated_ask"],
     properties={
-        "npc_message": genai.types.Schema(type=genai.types.Type.STRING),
-        "trade_accepted": genai.types.Schema(type=genai.types.Type.BOOLEAN),
-        "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER),
-        "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER),
+        "npc_message": genai.types.Schema(type=genai.types.Type.STRING, description="The message the NPC will say to the user."),
+        "trade_accepted": genai.types.Schema(type=genai.types.Type.BOOLEAN, description="Whether the trade was accepted or not."),
+        "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated bid price. This is the price you will buy the stock at. It should change if you agree to a trade at a different price"),
+        "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated ask price. This is the price you will sell the stock at. It should change if you agree to a trade at a different price"),
     },
 )
 
@@ -116,7 +114,7 @@ async def negotiate(req: NegotiateRequest):
     )
 
     config = types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL"),
+        thinking_config=types.ThinkingConfig(thinking_level="LOW"),
         response_mime_type="application/json",
         response_schema=RESPONSE_SCHEMA,
         system_instruction=[types.Part.from_text(text=system_prompt)],
@@ -124,11 +122,22 @@ async def negotiate(req: NegotiateRequest):
 
     try:
         client = get_client()
-        response = client.models.generate_content(
-            model="gemini-3-flash-preview",
-            contents=contents,
-            config=config,
-        )
+        response = None
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-3.1-pro-preview",
+                    contents=contents,
+                    config=config,
+                )
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt < 2:
+                    delay = 1 * (2 ** attempt)
+                    logger.warning(f"429 rate limited, retrying in {delay}s (attempt {attempt + 1}/3)")
+                    await asyncio.sleep(delay)
+                else:
+                    raise
 
         result = json.loads(response.text)
 
@@ -139,6 +148,13 @@ async def negotiate(req: NegotiateRequest):
         if updated_bid >= updated_ask:
             updated_bid = req.current_bid
             updated_ask = req.current_ask
+
+        logger.info("--------------------------------")
+
+        logger.info(f"Updated bid: {updated_bid}, Updated ask: {updated_ask}")
+        logger.info(f"Message: {result['npc_message']}")
+        logger.info(f"Trade accepted: {result['trade_accepted']}")
+        logger.info("--------------------------------")
 
         return NegotiateResponse(
             npc_message=result["npc_message"],

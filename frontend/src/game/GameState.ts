@@ -5,6 +5,7 @@ export class GameState {
 
   // Player
   playerName = ''
+  saveSlot = 1
 
   // Day tracking
   dayNumber = 1
@@ -56,6 +57,7 @@ export class GameState {
 
   reset(): void {
     this.playerName = ''
+    this.saveSlot = 1
     this.dayNumber = 1
     this.currentDate = '1987-01-02'
     this.phase = 'morning'

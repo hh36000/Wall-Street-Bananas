@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { gameState } from '../GameState'
 import { marketData } from '../systems/MarketDataEngine'
+import { tradingSystem } from '../systems/TradingSystem'
 import { playLoopedMusic } from '../systems/MusicManager'
 
 export class MorningScene extends Phaser.Scene {
@@ -84,11 +85,16 @@ export class MorningScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    // Cumulative P&L
-    const cumPnlColor = gameState.cumulativePnl >= 0 ? '#4ade80' : '#f87171'
-    const cumPnlSign = gameState.cumulativePnl >= 0 ? '+' : '-'
+    // Cumulative P&L — mark portfolio to market with current prices
+    const lastResult = gameState.dayResults[gameState.dayResults.length - 1]
+    const staleUnrealized = lastResult?.unrealizedPnl ?? 0
+    const currentUnrealized = tradingSystem.getUnrealizedPnl()
+    const mtmCumulativePnl = gameState.cumulativePnl - staleUnrealized + currentUnrealized
+
+    const cumPnlColor = mtmCumulativePnl >= 0 ? '#4ade80' : '#f87171'
+    const cumPnlSign = mtmCumulativePnl >= 0 ? '+' : '-'
     this.add
-      .text(width / 2, 188, `Cumulative P&L: ${cumPnlSign}$${fmt(Math.abs(gameState.cumulativePnl))}`, {
+      .text(width / 2, 188, `Cumulative P&L: ${cumPnlSign}$${fmt(Math.abs(mtmCumulativePnl))}`, {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: cumPnlColor,

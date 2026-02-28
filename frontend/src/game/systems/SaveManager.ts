@@ -1,7 +1,7 @@
 import { gameState } from '../GameState'
 import type { Position, Trade, DayResult, NPCInteractionEntry } from '../types'
 
-const SAVE_KEY = 'wsb-save'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 interface SaveData {
   playerName: string
@@ -14,72 +14,81 @@ interface SaveData {
   npcMemory: [string, NPCInteractionEntry[]][]
 }
 
-export interface SaveSummary {
-  playerName: string
-  dayNumber: number
-  cumulativePnl: number
+export interface SlotSummary {
+  slot: number
+  empty?: boolean
+  playerName?: string
+  dayNumber?: number
+  cumulativePnl?: number
+}
+
+function buildSaveData(): SaveData {
+  return {
+    playerName: gameState.playerName,
+    dayNumber: gameState.dayNumber,
+    currentDate: gameState.currentDate,
+    cumulativePnl: gameState.cumulativePnl,
+    positions: Array.from(gameState.positions.entries()),
+    allTrades: gameState.allTrades,
+    dayResults: gameState.dayResults,
+    npcMemory: Array.from(gameState.npcMemory.entries()),
+  }
+}
+
+function applyLoadData(data: SaveData): void {
+  gameState.playerName = data.playerName
+  gameState.dayNumber = data.dayNumber
+  gameState.currentDate = data.currentDate
+  gameState.cumulativePnl = data.cumulativePnl
+  gameState.positions = new Map(data.positions)
+  gameState.allTrades = data.allTrades
+  gameState.dayResults = data.dayResults
+  gameState.npcMemory = new Map(data.npcMemory)
+  gameState.todayTrades = []
+  gameState.npcInteractions.clear()
+  gameState.phase = 'morning'
+  gameState.isGameOver = false
 }
 
 export const SaveManager = {
-  save(): void {
-    const data: SaveData = {
-      playerName: gameState.playerName,
-      dayNumber: gameState.dayNumber,
-      currentDate: gameState.currentDate,
-      cumulativePnl: gameState.cumulativePnl,
-      positions: Array.from(gameState.positions.entries()),
-      allTrades: gameState.allTrades,
-      dayResults: gameState.dayResults,
-      npcMemory: Array.from(gameState.npcMemory.entries()),
-    }
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data))
+  save(slot?: number): void {
+    const s = slot ?? gameState.saveSlot
+    const data = buildSaveData()
+    fetch(`${API_BASE_URL}/saves/${s}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => {})
   },
 
-  load(): boolean {
-    const raw = localStorage.getItem(SAVE_KEY)
-    if (!raw) return false
-
+  async load(slot: number): Promise<boolean> {
     try {
-      const data: SaveData = JSON.parse(raw)
-      gameState.playerName = data.playerName
-      gameState.dayNumber = data.dayNumber
-      gameState.currentDate = data.currentDate
-      gameState.cumulativePnl = data.cumulativePnl
-      gameState.positions = new Map(data.positions)
-      gameState.allTrades = data.allTrades
-      gameState.dayResults = data.dayResults
-      gameState.npcMemory = new Map(data.npcMemory)
-      gameState.todayTrades = []
-      gameState.npcInteractions.clear()
-      gameState.phase = 'morning'
-      gameState.isGameOver = false
+      const res = await fetch(`${API_BASE_URL}/saves/${slot}`)
+      const json = await res.json()
+      if (!json.found) return false
+      applyLoadData(json.data as SaveData)
+      gameState.saveSlot = slot
       return true
     } catch {
       return false
     }
   },
 
-  hasSave(): boolean {
-    return localStorage.getItem(SAVE_KEY) !== null
-  },
-
-  deleteSave(): void {
-    localStorage.removeItem(SAVE_KEY)
-  },
-
-  getSaveSummary(): SaveSummary | null {
-    const raw = localStorage.getItem(SAVE_KEY)
-    if (!raw) return null
-
+  async listSlots(): Promise<SlotSummary[]> {
     try {
-      const data: SaveData = JSON.parse(raw)
-      return {
-        playerName: data.playerName,
-        dayNumber: data.dayNumber,
-        cumulativePnl: data.cumulativePnl,
-      }
+      const res = await fetch(`${API_BASE_URL}/saves`)
+      const json = await res.json()
+      return json.slots as SlotSummary[]
     } catch {
-      return null
+      return [
+        { slot: 1, empty: true },
+        { slot: 2, empty: true },
+        { slot: 3, empty: true },
+      ]
     }
+  },
+
+  deleteSave(slot: number): void {
+    fetch(`${API_BASE_URL}/saves/${slot}`, { method: 'DELETE' }).catch(() => {})
   },
 }
