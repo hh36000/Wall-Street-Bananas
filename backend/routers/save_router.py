@@ -27,6 +27,7 @@ class SaveData(BaseModel):
     allTrades: list
     dayResults: list
     npcMemory: list
+    favorabilityScores: list = []
 
 
 @router.post("/{slot}")

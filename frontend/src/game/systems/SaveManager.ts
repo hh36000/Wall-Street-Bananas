@@ -12,6 +12,7 @@ interface SaveData {
   allTrades: Trade[]
   dayResults: DayResult[]
   npcMemory: [string, NPCInteractionEntry[]][]
+  favorabilityScores: [string, number][]
 }
 
 export interface SlotSummary {
@@ -32,6 +33,7 @@ function buildSaveData(): SaveData {
     allTrades: gameState.allTrades,
     dayResults: gameState.dayResults,
     npcMemory: Array.from(gameState.npcMemory.entries()),
+    favorabilityScores: Array.from(gameState.favorabilityScores.entries()),
   }
 }
 
@@ -44,6 +46,7 @@ function applyLoadData(data: SaveData): void {
   gameState.allTrades = data.allTrades
   gameState.dayResults = data.dayResults
   gameState.npcMemory = new Map(data.npcMemory)
+  gameState.favorabilityScores = new Map(data.favorabilityScores ?? [])
   gameState.todayTrades = []
   gameState.npcInteractions.clear()
   gameState.phase = 'morning'
