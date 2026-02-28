@@ -47,7 +47,7 @@ class NegotiateResponse(BaseModel):
     trade_accepted: bool
     updated_bid: float
     updated_ask: float
-
+    favorability_score: float
 
 SYSTEM_PROMPT_TEMPLATE = """You are {trader_name}, a stock trader on the 1980s Wall Street trading floor.
 Your personality: {personality}
@@ -65,12 +65,13 @@ Stay in character. Keep responses short (1-3 sentences). Be entertaining."""
 
 RESPONSE_SCHEMA = genai.types.Schema(
     type=genai.types.Type.OBJECT,
-    required=["npc_message", "trade_accepted", "updated_bid", "updated_ask"],
+    required=["npc_message", "trade_accepted", "updated_bid", "updated_ask", "favorability_score"],
     properties={
         "npc_message": genai.types.Schema(type=genai.types.Type.STRING, description="The message the NPC will say to the user."),
         "trade_accepted": genai.types.Schema(type=genai.types.Type.BOOLEAN, description="Whether the trade was accepted or not."),
         "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated bid price. This is the price you will buy the stock at. It should change if you agree to a trade at a different price"),
         "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated ask price. This is the price you will sell the stock at. It should change if you agree to a trade at a different price"),
+        "favorability_score": genai.types.Schema(type=genai.types.Type.NUMBER, description="The favorability score of the trader. This is a number between 0 and 100. 100 is the most favorable, 0 is the least favorable."),
     },
 )
 
@@ -154,6 +155,7 @@ async def negotiate(req: NegotiateRequest):
         logger.info(f"Updated bid: {updated_bid}, Updated ask: {updated_ask}")
         logger.info(f"Message: {result['npc_message']}")
         logger.info(f"Trade accepted: {result['trade_accepted']}")
+        logger.info(f"Favorability score: {result['favorability_score']}")
         logger.info("--------------------------------")
 
         return NegotiateResponse(
@@ -161,6 +163,7 @@ async def negotiate(req: NegotiateRequest):
             trade_accepted=result["trade_accepted"],
             updated_bid=round(updated_bid, 2),
             updated_ask=round(updated_ask, 2),
+            favorability_score=result["favorability_score"],
         )
 
     except Exception as e:
@@ -171,4 +174,5 @@ async def negotiate(req: NegotiateRequest):
             trade_accepted=False,
             updated_bid=req.current_bid,
             updated_ask=req.current_ask,
+            favorability_score=50,
         )

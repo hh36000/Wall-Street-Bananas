@@ -47,6 +47,9 @@ export class TradingUIScene extends Phaser.Scene {
   private originalBid = 0
   private originalAsk = 0
 
+  // Trader favorability score (0-100) from negotiation API
+  private favorabilityScore: number | null = null
+
   // Ticker scroller
   private tickerScrollContainer!: Phaser.GameObjects.Container
   private tickerScrollWidth = 0
@@ -137,6 +140,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.conversationHistory = []
     this.sessionTrades = []
     this.isNegotiating = false
+    this.favorabilityScore = null
 
     this.dialogTexts.get('name')!.setText(`${trader.nickname} — ${trader.name}`)
     this.dialogTexts.get('quote')!.setText(npcManager.formatQuote(trader, this.activeQuote))
@@ -612,6 +616,12 @@ export class TradingUIScene extends Phaser.Scene {
       this.addChatMessage('npc', response.npc_message)
       this.conversationHistory.push({ role: 'npc', content: response.npc_message })
 
+      // Update favorability score
+      this.favorabilityScore = response.favorability_score
+      gameState.favorabilityScores.set(this.activeTrader.id, response.favorability_score)
+      this.game.events.emit('favorability:updated', this.activeTrader.id, response.favorability_score)
+      if (this.cheatVisible) this.updateCheatInfo()
+
       // Update quote whenever the returned prices differ from current
       const bidChanged = response.updated_bid !== this.activeQuote.bid
       const askChanged = response.updated_ask !== this.activeQuote.ask
@@ -794,7 +804,9 @@ export class TradingUIScene extends Phaser.Scene {
   private toggleCheat(): void {
     this.cheatVisible = !this.cheatVisible
     this.cheatContainer.setVisible(this.cheatVisible)
-    if (!this.cheatVisible) {
+    if (this.cheatVisible) {
+      this.updateCheatInfo()
+    } else {
       this.historyVisible = false
       this.historyContainer.setVisible(false)
     }
@@ -840,6 +852,14 @@ export class TradingUIScene extends Phaser.Scene {
       lines.push(`Tomorrow: $${tomorrowPrice.toFixed(2)} (${sign}${chgPct.toFixed(2)}%)`)
     } else {
       lines.push('Tomorrow: —')
+    }
+
+    if (this.favorabilityScore != null) {
+      const score = Math.round(this.favorabilityScore)
+      const bar = '\u2588'.repeat(Math.round(score / 10)) + '\u2591'.repeat(10 - Math.round(score / 10))
+      lines.push(`Favorability: [${bar}] ${score}/100`)
+    } else {
+      lines.push('Favorability: — (negotiate to reveal)')
     }
 
     lines.push('[H] View relationship history context')

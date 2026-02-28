@@ -34,6 +34,9 @@ export class GameState {
   // NPC memory for AI negotiation: npcId -> interaction history
   npcMemory: Map<string, NPCInteractionEntry[]> = new Map()
 
+  // Favorability scores from negotiation: traderId -> 0-100
+  favorabilityScores: Map<string, number> = new Map()
+
   // Day results history
   dayResults: DayResult[] = []
 
@@ -67,6 +70,7 @@ export class GameState {
     this.todayTrades = []
     this.npcInteractions.clear()
     this.npcMemory.clear()
+    this.favorabilityScores.clear()
     this.dayResults = []
     this.cumulativePnl = 0
     this.isGameOver = false

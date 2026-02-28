@@ -137,6 +137,7 @@ export class TradingFloorScene extends Phaser.Scene {
     }
     this.uiScene = this.scene.get('TradingUIScene') as TradingUIScene
     this.game.events.on('trading:end-day-early', this.endTradingDay, this)
+    this.game.events.on('favorability:updated', this.onFavorabilityUpdated, this)
 
     this.interactKey.on('down', () => {
       if (this.countdownActive) return
@@ -186,6 +187,7 @@ export class TradingFloorScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('trading:end-day-early', this.endTradingDay, this)
+      this.game.events.off('favorability:updated', this.onFavorabilityUpdated, this)
       this.closeTickerSearch()
       if (this.tradingMusic?.isPlaying) {
         this.tradingMusic.stop()
@@ -360,11 +362,16 @@ export class TradingFloorScene extends Phaser.Scene {
       const labelText = trader.ticker
         ? `${trader.nickname}\n${trader.ticker}`
         : trader.nickname
+      const score = gameState.favorabilityScores.get(trader.id)
+      let labelColor = '#facc15'
+      if (score != null && score >= 66) labelColor = '#4ade80'
+      else if (score != null && score <= 33) labelColor = '#f87171'
+
       const label = this.add
         .text(0, labelY, labelText, {
           fontSize: '10px',
           fontFamily: 'monospace',
-          color: '#facc15',
+          color: labelColor,
           backgroundColor: '#000000',
           padding: { x: 4, y: 2 },
           align: 'center',
@@ -513,6 +520,15 @@ export class TradingFloorScene extends Phaser.Scene {
     input.focus()
   }
 
+  private onFavorabilityUpdated(traderId: string, score: number): void {
+    if (this.showingWeaknesses) return
+    const label = this.npcLabels.get(traderId)
+    if (!label) return
+    if (score >= 66) label.setColor('#4ade80')
+    else if (score <= 33) label.setColor('#f87171')
+    else label.setColor('#facc15')
+  }
+
   private toggleWeaknessLabels(): void {
     this.showingWeaknesses = !this.showingWeaknesses
     for (const [id, label] of this.npcLabels) {
@@ -526,7 +542,10 @@ export class TradingFloorScene extends Phaser.Scene {
           ? `${trader.nickname}\n${trader.ticker}`
           : trader.nickname
         label.setText(text)
-        label.setColor('#facc15')
+        const score = gameState.favorabilityScores.get(id)
+        if (score != null && score >= 66) label.setColor('#4ade80')
+        else if (score != null && score <= 33) label.setColor('#f87171')
+        else label.setColor('#facc15')
       }
     }
   }

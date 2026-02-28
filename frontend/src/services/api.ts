@@ -41,6 +41,7 @@ export interface NegotiateResponse {
   trade_accepted: boolean
   updated_bid: number
   updated_ask: number
+  favorability_score: number
 }
 
 export async function negotiate(req: NegotiateRequest): Promise<NegotiateResponse> {
