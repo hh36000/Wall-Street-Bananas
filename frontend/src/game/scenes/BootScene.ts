@@ -82,6 +82,11 @@ export class BootScene extends Phaser.Scene {
       this.load.image(name, `/game-assets/sprites/${name}.png`)
     }
 
+    // Music
+    this.load.audio('music-morning', '/game-assets/music/Wall_Street_Drive.mp3')
+    this.load.audio('music-trading', '/game-assets/music/Wall_Street_Warrior.mp3')
+    this.load.audio('music-summary', '/game-assets/music/Neon_Horizon_Glide.mp3')
+
     // Market data JSON
     this.load.json('market-data', '/game-assets/data/market-data.json')
   }

@@ -2,7 +2,6 @@ import type { Position, Trade, InteractionLog, DayResult, NPCInteractionEntry } 
 
 export class GameState {
   static readonly SANDBOX_MAX_EXPOSURE = 1_000_000_000
-  static readonly SANDBOX_MAX_DEBT = -1_000_000_000
 
   // Day tracking
   dayNumber = 1
@@ -10,18 +9,11 @@ export class GameState {
   phase: 'morning' | 'trading' | 'summary' = 'morning'
 
   // Timer
-  tradingTimeRemaining = 180 // seconds
-  tradingDayLength = 180
+  tradingTimeRemaining = 60 // seconds
+  tradingDayLength = 60
 
-  // Money
-  capital = 1000
-  startingCapital = 1000
+  // Trading
   tradeNotional = 100_000 // fixed dollar amount per trade
-  maxLeverage = 10
-  maxDebt = GameState.SANDBOX_MAX_DEBT
-
-  // Debt tracking
-  consecutiveDaysInDebt = 0
 
   // Positions: ticker -> Position
   positions: Map<string, Position> = new Map()
@@ -59,17 +51,11 @@ export class GameState {
     return total
   }
 
-  get isInDebt(): boolean {
-    return this.capital < 0
-  }
-
   reset(): void {
     this.dayNumber = 1
     this.currentDate = '1987-01-02'
     this.phase = 'morning'
     this.tradingTimeRemaining = this.tradingDayLength
-    this.capital = this.startingCapital
-    this.consecutiveDaysInDebt = 0
     this.positions.clear()
     this.allTrades = []
     this.todayTrades = []

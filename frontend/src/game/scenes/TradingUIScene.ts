@@ -743,7 +743,7 @@ export class TradingUIScene extends Phaser.Scene {
       this.updateHUD()
     } else {
       resultText.setColor('#f87171')
-      resultText.setText('Trade rejected — projected exposure or debt limit exceeded')
+      resultText.setText('Trade rejected — exposure limit exceeded')
     }
   }
 
@@ -840,7 +840,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer = this.add.container(0, 0)
     this.hudContainer.setDepth(500)
 
-    const hudBg = this.add.rectangle(cw / 2, 0, cw, 60, 0x0a0a1a, 0.88)
+    const hudBg = this.add.rectangle(cw / 2, 0, cw, 72, 0x0a0a1a, 0.88)
     hudBg.setOrigin(0.5, 0)
     this.hudContainer.add(hudBg)
 
@@ -932,7 +932,7 @@ export class TradingUIScene extends Phaser.Scene {
 
   private buildTickerScroller(): void {
     const cw = this.scale.width
-    const scrollerY = 60
+    const scrollerY = 72
     const scrollerH = 20
 
     // Background bar
@@ -1001,14 +1001,16 @@ export class TradingUIScene extends Phaser.Scene {
   }
 
   private updateHUD(): void {
-    const capitalText = this.hudTexts.get('capital')!
-    capitalText.setText(`Cash: $${this.fmt(gameState.capital)}`)
-    capitalText.setColor(gameState.capital >= 0 ? '#4ade80' : '#f87171')
-
     const todayPnl = tradingSystem.getTodayRealizedPnl() + tradingSystem.getUnrealizedPnl()
+    const totalPnl = gameState.cumulativePnl + todayPnl
+    const capitalText = this.hudTexts.get('capital')!
+    const totalSign = totalPnl >= 0 ? '+' : '-'
+    capitalText.setText(`P&L: ${totalSign}$${this.fmt(totalPnl)}`)
+    capitalText.setColor(totalPnl >= 0 ? '#4ade80' : '#f87171')
+
     const pnlText = this.hudTexts.get('pnl')!
-    const pnlSign = todayPnl >= 0 ? '+' : ''
-    pnlText.setText(`P&L: ${pnlSign}$${this.fmt(todayPnl)}`)
+    const todaySign = todayPnl >= 0 ? '+' : '-'
+    pnlText.setText(`Today: ${todaySign}$${this.fmt(todayPnl)}`)
     pnlText.setColor(todayPnl >= 0 ? '#4ade80' : '#f87171')
 
     const netExposure = tradingSystem.getNetMarketExposure()

@@ -84,5 +84,5 @@ export interface DayResult {
   realizedPnl: number
   unrealizedPnl: number
   netPnl: number
-  endingCapital: number
+  cumulativePnl: number
 }

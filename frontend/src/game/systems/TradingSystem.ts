@@ -35,10 +35,6 @@ export class TradingSystem {
   }
 
   private wouldExceedMargin(ticker: string, deltaQuantity: number, tradePrice: number): boolean {
-    if (gameState.capital <= 0) {
-      return false
-    }
-
     const projectedNetExposure = this.getProjectedNetMarketExposure(ticker, deltaQuantity, tradePrice)
     return Math.abs(projectedNetExposure) > gameState.maxPositionValue
   }
@@ -85,15 +81,9 @@ export class TradingSystem {
    */
   buy(ticker: string, price: number, npcId: string, npcName: string): boolean {
     const quantity = this.getTradeQuantity(price)
-    const cost = gameState.tradeNotional
 
     // Margin is enforced against projected net market-value exposure.
     if (this.wouldExceedMargin(ticker, quantity, price)) {
-      return false
-    }
-
-    // Check debt limit
-    if (gameState.capital - cost < gameState.maxDebt) {
       return false
     }
 
@@ -119,9 +109,6 @@ export class TradingSystem {
       gameState.positions.set(ticker, { ticker, quantity, avgPrice: price })
     }
 
-    // Deduct capital
-    gameState.capital -= cost
-
     // Record trade
     const trade: Trade = {
       day: gameState.dayNumber,
@@ -145,7 +132,6 @@ export class TradingSystem {
    */
   sell(ticker: string, price: number, npcId: string, npcName: string): boolean {
     const quantity = this.getTradeQuantity(price)
-    const proceeds = gameState.tradeNotional
     const existing = gameState.positions.get(ticker)
     const isReducingExistingLong =
       !!existing && existing.quantity > 0 && quantity <= existing.quantity
@@ -177,9 +163,6 @@ export class TradingSystem {
       gameState.positions.set(ticker, { ticker, quantity: -quantity, avgPrice: price })
     }
 
-    // Add proceeds to capital
-    gameState.capital += proceeds
-
     // Record trade
     const trade: Trade = {
       day: gameState.dayNumber,
@@ -208,12 +191,6 @@ export class TradingSystem {
     const quantity = Math.abs(existing.quantity)
     const notional = quantity * price
     const side: 'BUY' | 'SELL' = existing.quantity > 0 ? 'SELL' : 'BUY'
-
-    if (side === 'SELL') {
-      gameState.capital += notional
-    } else {
-      gameState.capital -= notional
-    }
 
     gameState.positions.delete(ticker)
 
@@ -294,18 +271,6 @@ export class TradingSystem {
     const unrealizedPnl = this.getUnrealizedPnl()
     const netPnl = realizedPnl + unrealizedPnl
 
-    // Update debt tracking
-    if (gameState.capital < 0) {
-      gameState.consecutiveDaysInDebt++
-    } else {
-      gameState.consecutiveDaysInDebt = 0
-    }
-
-    // Check game over
-    if (gameState.consecutiveDaysInDebt >= 3) {
-      gameState.isGameOver = true
-    }
-
     // Save day result
     gameState.dayResults.push({
       day: gameState.dayNumber,
@@ -314,7 +279,7 @@ export class TradingSystem {
       realizedPnl,
       unrealizedPnl,
       netPnl,
-      endingCapital: gameState.capital,
+      cumulativePnl: gameState.cumulativePnl + netPnl,
     })
 
     gameState.cumulativePnl += netPnl

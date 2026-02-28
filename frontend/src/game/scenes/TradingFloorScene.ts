@@ -67,6 +67,8 @@ export class TradingFloorScene extends Phaser.Scene {
 
   private uiScene!: TradingUIScene
   private dayEnded = false
+  private countdownActive = true
+  private tradingMusic!: Phaser.Sound.BaseSound
 
   // Ticker search
   private tickerSearchInput: HTMLInputElement | null = null
@@ -133,18 +135,11 @@ export class TradingFloorScene extends Phaser.Scene {
     if (this.scene.isActive('TradingUIScene')) {
       this.scene.stop('TradingUIScene')
     }
-    this.scene.launch('TradingUIScene')
     this.uiScene = this.scene.get('TradingUIScene') as TradingUIScene
     this.game.events.on('trading:end-day-early', this.endTradingDay, this)
 
-    this.dayTimer = this.time.addEvent({
-      delay: 1000,
-      callback: this.tickTimer,
-      callbackScope: this,
-      loop: true,
-    })
-
     this.interactKey.on('down', () => {
+      if (this.countdownActive) return
       if (this.uiScene.isDialogOpen()) return
       if (!this.nearestNPC) return
 
@@ -152,6 +147,10 @@ export class TradingFloorScene extends Phaser.Scene {
       if (!trader || !trader.ticker) return
       this.uiScene.openTradeDialog(trader)
     })
+
+    // ─── Countdown ───
+    this.countdownActive = true
+    this.runCountdown()
 
     const cw = this.cameras.main.width
     const ch = this.cameras.main.height
@@ -168,6 +167,7 @@ export class TradingFloorScene extends Phaser.Scene {
 
     // Cmd+F ticker search
     this.tickerSearchKeyHandler = (e: KeyboardEvent) => {
+      if (this.countdownActive) return
       if ((e.key === 'f' || e.key === 'F') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         if (this.uiScene.isDialogOpen()) return
@@ -187,6 +187,9 @@ export class TradingFloorScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('trading:end-day-early', this.endTradingDay, this)
       this.closeTickerSearch()
+      if (this.tradingMusic?.isPlaying) {
+        this.tradingMusic.stop()
+      }
       if (this.tickerSearchKeyHandler) {
         window.removeEventListener('keydown', this.tickerSearchKeyHandler)
         this.tickerSearchKeyHandler = null
@@ -194,6 +197,113 @@ export class TradingFloorScene extends Phaser.Scene {
       if (this.scene.isActive('TradingUIScene')) {
         this.scene.stop('TradingUIScene')
       }
+    })
+  }
+
+  private playBeep(freq: number, duration: number): void {
+    const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context
+    if (!ctx) return
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'square'
+    osc.frequency.value = freq
+    gain.gain.value = 0.15
+    gain.gain.setValueAtTime(0.15, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + duration)
+  }
+
+  private runCountdown(): void {
+    const { width, height } = this.scale
+    const cam = this.cameras.main
+
+    // Full-screen overlay fixed to camera
+    const overlay = this.add.rectangle(cam.width / 2, cam.height / 2, cam.width, cam.height, 0x000000, 0.75)
+    overlay.setScrollFactor(0).setDepth(9000)
+
+    const countText = this.add
+      .text(cam.width / 2, cam.height / 2, '5', {
+        fontSize: '160px',
+        fontFamily: '"Press Start 2P"',
+        color: '#facc15',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(9001)
+
+    const subtitleText = this.add
+      .text(cam.width / 2, cam.height / 2 + 110, 'MARKET OPENS IN...', {
+        fontSize: '18px',
+        fontFamily: 'monospace',
+        color: '#94a3b8',
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(9001)
+
+    let remaining = 5
+
+    // Initial beep
+    this.playBeep(440, 0.2)
+
+    const ticker = this.time.addEvent({
+      delay: 1000,
+      callback: () => {
+        remaining--
+        if (remaining > 0) {
+          countText.setText(`${remaining}`)
+          // Scale pop animation
+          countText.setScale(1.3)
+          this.tweens.add({ targets: countText, scale: 1, duration: 300, ease: 'Back.easeOut' })
+          this.playBeep(440, 0.2)
+        } else {
+          // GO!
+          countText.setText('GO!')
+          countText.setColor('#4ade80')
+          countText.setFontSize(120)
+          countText.setScale(1.5)
+          this.tweens.add({ targets: countText, scale: 1, duration: 300, ease: 'Back.easeOut' })
+          subtitleText.setText('MARKET IS OPEN')
+          subtitleText.setColor('#4ade80')
+          this.playBeep(880, 0.4)
+
+          ticker.destroy()
+
+          // Fade out overlay after a beat
+          this.time.delayedCall(600, () => {
+            this.tweens.add({
+              targets: [overlay, countText, subtitleText],
+              alpha: 0,
+              duration: 400,
+              onComplete: () => {
+                overlay.destroy()
+                countText.destroy()
+                subtitleText.destroy()
+
+                // Now start trading
+                this.countdownActive = false
+                this.scene.launch('TradingUIScene')
+
+                this.dayTimer = this.time.addEvent({
+                  delay: 1000,
+                  callback: this.tickTimer,
+                  callbackScope: this,
+                  loop: true,
+                })
+
+                // Start trading music
+                this.tradingMusic = this.sound.add('music-trading', { loop: true, volume: 0.5 })
+                this.tradingMusic.play()
+              },
+            })
+          })
+        }
+      },
+      callbackScope: this,
+      loop: true,
     })
   }
 
@@ -292,7 +402,12 @@ export class TradingFloorScene extends Phaser.Scene {
     if (this.dayEnded) return
     this.dayEnded = true
 
-    this.dayTimer.destroy()
+    this.dayTimer?.destroy()
+
+    // Stop trading music
+    if (this.tradingMusic?.isPlaying) {
+      this.tradingMusic.stop()
+    }
 
     if (this.uiScene.isDialogOpen()) {
       this.uiScene.closeTradeDialog()
@@ -435,6 +550,12 @@ export class TradingFloorScene extends Phaser.Scene {
 
     const body = this.player.body as Phaser.Physics.Arcade.Body
 
+    if (this.countdownActive) {
+      body.setVelocity(0, 0)
+      this.promptText.setVisible(false)
+      return
+    }
+
     if (this.uiScene.isDialogOpen()) {
       body.setVelocity(0, 0)
       this.promptText.setVisible(false)
@@ -473,7 +594,7 @@ export class TradingFloorScene extends Phaser.Scene {
         `Viewport:${Math.round(vw)}x${Math.round(vh)}`,
         `Player:${px},${py} Near:${near}`,
         `Dialog:${dlg} Timer:${timer}s`,
-        `Pos:${positions} Trades:${trades} Cap:$${gameState.capital.toFixed(0)}`,
+        `Pos:${positions} Trades:${trades} PnL:$${gameState.cumulativePnl.toFixed(0)}`,
       ].join('\n')
     )
   }
