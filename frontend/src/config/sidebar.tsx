@@ -1,5 +1,5 @@
 import React from 'react'
-import { Home as HomeIcon, Settings, TrendingUp, LayoutGrid, Globe, Sparkles, Network } from 'lucide-react'
+import { Home as HomeIcon, Settings, TrendingUp, LayoutGrid, Globe, Sparkles, Network, Gamepad2 } from 'lucide-react'
 import type { SidebarSection, SidebarItem } from '@/types/sidebar'
 
 // Icon component mapping
@@ -11,6 +11,7 @@ const iconComponents = {
   Globe: Globe,
   Sparkles: Sparkles,
   Network: Network,
+  Gamepad2: Gamepad2,
 } as const
 
 type IconName = keyof typeof iconComponents
@@ -46,6 +47,12 @@ const baseSidebarConfig: BaseSidebarSection[] = [
         label: 'API',
         href: '/api',
         iconName: 'Network' as IconName,
+      },
+      {
+        id: 'game',
+        label: 'Game',
+        href: '/game',
+        iconName: 'Gamepad2' as IconName,
       },
     ],
   },
