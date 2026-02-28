@@ -108,7 +108,7 @@ Provides real stock prices from the 1980s.
 - Calculates today's price change vs yesterday for each stock (for HUD ticker display and morning news).
 - Identifies the biggest movers of the day (for morning news generation).
 
-**25 stocks, one per NPC:** IBM, GE, XOM, T, KO, JNJ, MRK, PG, MO, MMM, DD, BA, PEP, WMT, F, AXP, INTC, DIS, MCD, CVX, PFE, HPQ, GM, JPM, ABT.
+**25 stocks, one per NPC:**  see the file in the backend
 
 ### 2. Trading System
 
@@ -148,6 +148,7 @@ Manages all 25 traders.
 - Send to Gemini. Display the response in the chat log.
 - Parse the response for the structured trade tag. If found, execute the trade.
 - Append a summary of the interaction to the NPC's memory log. This log grows over the course of the game and gets fed into every future call — this is the long-context memory.
+- You should be using configs for each NPC on their negotiation style. Set categories for flecibility [Low, Medium, High] which determines the price % they are willing to flex to if they accept your offer and also LMH for a config set where it determines how much u have to sway to get them to move their price for example an npc who is easy to sway you can just be friendly, for a hard sway you may have to promise to pay for their first born's college. These will change each day for each NPC and will be provided to gemini in the system prompt for the day. 
 
 **Fallback:** If Gemini is slow (timeout after 5-10 seconds) or errors, display the NPC's static fallback greeting and their mathematical quote. The game must be playable without AI.
 
