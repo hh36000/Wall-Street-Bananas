@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import { BootScene } from '@/game/scenes/BootScene'
+import { PlayerSetupScene } from '@/game/scenes/PlayerSetupScene'
 import { MorningScene } from '@/game/scenes/MorningScene'
 import { TradingFloorScene } from '@/game/scenes/TradingFloorScene'
 import { TradingUIScene } from '@/game/scenes/TradingUIScene'
@@ -30,7 +31,10 @@ function Game() {
           debug: false,
         },
       },
-      scene: [BootScene, MorningScene, TradingFloorScene, TradingUIScene, DaySummaryScene],
+      dom: {
+        createContainer: true,
+      },
+      scene: [BootScene, PlayerSetupScene, MorningScene, TradingFloorScene, TradingUIScene, DaySummaryScene],
     }
 
     gameRef.current = new Phaser.Game(config)

@@ -3,6 +3,7 @@ import { gameState } from '../GameState'
 import { marketData } from '../systems/MarketDataEngine'
 import { tradingSystem } from '../systems/TradingSystem'
 import { playLoopedMusic } from '../systems/MusicManager'
+import { SaveManager } from '../systems/SaveManager'
 
 export class DaySummaryScene extends Phaser.Scene {
   private music!: Phaser.Sound.WebAudioSound
@@ -171,6 +172,7 @@ export class DaySummaryScene extends Phaser.Scene {
     }
     gameState.currentDate = nextDate
     gameState.phase = 'morning'
+    SaveManager.save()
     this.scene.start('MorningScene')
   }
 }

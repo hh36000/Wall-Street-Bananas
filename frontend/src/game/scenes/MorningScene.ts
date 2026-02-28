@@ -72,9 +72,12 @@ export class MorningScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    // Day number
+    // Day number + player name
+    const dayLabel = gameState.playerName
+      ? `Day ${gameState.dayNumber}  ·  ${gameState.playerName}`
+      : `Day ${gameState.dayNumber}`
     this.add
-      .text(width / 2, 156, `Day ${gameState.dayNumber}`, {
+      .text(width / 2, 156, dayLabel, {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#94a3b8',

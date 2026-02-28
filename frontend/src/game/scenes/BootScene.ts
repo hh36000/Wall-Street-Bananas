@@ -99,8 +99,8 @@ export class BootScene extends Phaser.Scene {
     // All traders now have sprite images — no placeholder generation needed
 
 
-    // Transition to morning scene
-    this.scene.start('MorningScene')
+    // Transition to player setup scene
+    this.scene.start('PlayerSetupScene')
   }
 
 }

@@ -62,6 +62,11 @@ export class MarketDataEngine {
     this.currentDateIndex = Math.max(0, Math.min(index, this.tradingDates.length - 1))
   }
 
+  advanceToDate(date: string): void {
+    const idx = this.tradingDates.indexOf(date)
+    if (idx >= 0) this.currentDateIndex = idx
+  }
+
   advanceDay(): string | null {
     if (this.currentDateIndex < this.tradingDates.length - 1) {
       this.currentDateIndex++

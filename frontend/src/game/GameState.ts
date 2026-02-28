@@ -3,6 +3,9 @@ import type { Position, Trade, InteractionLog, DayResult, NPCInteractionEntry } 
 export class GameState {
   static readonly SANDBOX_MAX_EXPOSURE = 1_000_000_000
 
+  // Player
+  playerName = ''
+
   // Day tracking
   dayNumber = 1
   currentDate = '1987-01-02'
@@ -52,6 +55,7 @@ export class GameState {
   }
 
   reset(): void {
+    this.playerName = ''
     this.dayNumber = 1
     this.currentDate = '1987-01-02'
     this.phase = 'morning'
