@@ -16,9 +16,15 @@ export class MorningScene extends Phaser.Scene {
       this.scene.stop('TradingUIScene')
     }
 
-    // Stop any carry-over music (e.g. title screen) then start fresh
-    this.sound.stopAll()
-    this.music = playLoopedMusic(this, 'music-morning')
+    // Day 1: morning music is already playing from title screen — keep it
+    // Later days: stop previous music and start a fresh loop
+    const alreadyPlaying = (this.sound as Phaser.Sound.WebAudioSoundManager)
+      .sounds.some(s => s.key === 'music-morning' && s.isPlaying)
+
+    if (!alreadyPlaying) {
+      this.sound.stopAll()
+      this.music = playLoopedMusic(this, 'music-morning')
+    }
 
     // Fill in nextDayPrice for previous day's NPC interactions
     if (gameState.dayNumber > 1) {
@@ -220,7 +226,7 @@ export class MorningScene extends Phaser.Scene {
 
     // Portfolio + button are placed below whichever container is visible
     const startTrading = () => {
-      this.music.stop()
+      this.sound.stopAll()
       this.scene.start('TradingFloorScene')
     }
 
