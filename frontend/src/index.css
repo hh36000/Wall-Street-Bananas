@@ -1,0 +1,792 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode palette - saturn-inspired */
+    --background: #fefefe; /* Clean white background */
+    --surface: #f8fafc;
+    --foreground: #1e293b; /* Dark text for contrast */
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b; /* Muted text color */
+    --primary: #6366f1; /* Indigo accent matching dark theme */
+    --primary-foreground: #ffffff;
+    --destructive: #b50000;
+    --destructive-foreground: #ffffff;
+    --border: #d1d5db;
+    --border-soft: rgba(209, 213, 219, 0.3);
+    --border-medium: rgba(209, 213, 219, 0.8);
+    --border-hard: #9ca3af;
+    --ring: #6366f1;
+    
+    /* Accessibility colors */
+    --success: #059669;
+    --success-foreground: #ffffff;
+    --warning: #d97706;
+    --warning-foreground: #ffffff;
+    --info: #0ea5e9;
+    --info-foreground: #ffffff;
+
+     /* Layout colors - Light theme */
+     --sidebar-navbar: #f8fafc; /* Light sidebar */
+     --navbar-bg: #ffffff;
+     --content-bg: #ffffff; /* Light content area */
+     --card-bg: #f8fafc; /* Light cards */
+     --scrollbar-thumb: #cbd5e1; /* Lighter scrollbar thumb for light theme */
+
+    /* Semantic aliases for Tailwind compatibility */
+    --card: var(--card-bg);
+    --card-foreground: var(--foreground);
+    --input: var(--border);
+
+    --radius: 0.75rem;
+
+    --font-sans: "IBM Plex Sans", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", sans-serif;
+    --font-heading: "IBM Plex Sans", "Georgia", "serif";
+    --font-mono: "Fira Code", "SFMono-Regular", "Menlo", "monospace";
+  }
+
+  .dark {
+    /* Dark mode palette - saturn-inspired design */
+    --background: #171721; /* Main background color */
+    --surface: #1a1a2e;
+    --foreground: #ffffff; /* Pure white text */
+    --muted: #1e293b;
+    --muted-foreground: #c3c3cc; /* saturn muted text color */
+    --primary: #6366f1; /* Indigo accent */
+    --primary-foreground: #ffffff;
+    --destructive: #b50000; /* Softer red */
+    --destructive-foreground: #ffffff;
+    --border: #2d2d3a; /* Darker saturn border color */
+    --border-soft: rgba(45, 45, 58, 0.3); /* Subtle border */
+    --border-medium: rgba(100, 100, 120, 0.5); /* Medium border */
+    --border-hard: #474853; /* Hard border for emphasis */
+    --ring: #6366f1;
+    
+    /* Accessibility colors */
+    --success: #10b981;
+    --success-foreground: #0f172a;
+    --warning: #f59e0b;
+    --warning-foreground: #0f172a;
+    --info: #06b6d4;
+    --info-foreground: #0f172a;
+
+    /* Layout colors */
+     --sidebar-navbar: #0f0f1a; /* Dark sidebar */
+     --content-bg: #181821; /* Page content area */
+    --card-bg: #1e1e2a; /* Card background */
+    --scrollbar-thumb: #1e2a3b; /* Dark theme scrollbar color */
+
+    /* Semantic aliases for Tailwind compatibility */
+    --card: var(--card-bg);
+    --card-foreground: var(--foreground);
+    --input: var(--border);
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Custom checkbox styling for dark mode */
+  input[type="checkbox"] {
+    appearance: none;
+    background-color: var(--muted);
+    border: 1px solid var(--muted-foreground);
+    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-top: -2px;
+  }
+
+  input[type="checkbox"]:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--primary-foreground);
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  /* Prevent layout shift from scrollbar appearing/disappearing */
+  html {
+    overflow-y: auto;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.6; /* Better line height for readability */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Enhanced focus styles for accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Improved button focus states */
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Better link focus states */
+  a:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    text-decoration: underline;
+  }
+
+  /* Improved input focus states */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Exception: Search input in navbar - let parent container handle focus */
+  #search-input:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@layer utilities {
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-3000 {
+    animation-delay: 3s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  .bg-transparent-navbar {
+    background-color: var(--content-bg) !important;
+  }
+
+  .dark .bg-transparent-navbar {
+    background-color: var(--content-bg) !important;
+  }
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.4s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+
+  @keyframes blink {
+    0%, 50% {
+      opacity: 1;
+    }
+    51%, 100% {
+      opacity: 0;
+    }
+  }
+
+  .animate-blink {
+    animation: blink 1s infinite;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  /* Mobile-specific utilities */
+  .mobile-menu-overlay {
+    backdrop-filter: blur(4px);
+  }
+
+  /* Prevent body scroll when mobile menu is open */
+  .mobile-menu-open {
+    overflow: hidden;
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-xs {
+    font-size: 0.75rem;
+  }
+  
+  @media (min-width: 640px) {
+    .text-responsive-xs {
+      font-size: 0.875rem;
+    }
+  }
+
+  /* Responsive spacing */
+  .space-responsive {
+    gap: 0.5rem;
+  }
+  
+  @media (min-width: 640px) {
+    .space-responsive {
+      gap: 1rem;
+    }
+  }
+
+  /* Accessibility utilities */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Reduced motion support */
+  /* Overflow wrap utility for aggressive text wrapping */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --border: #000000;
+      --border-soft: rgba(0, 0, 0, 0.3);
+    }
+    
+    .dark {
+      --border: #ffffff;
+      --border-soft: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  /* Eye-friendly utilities */
+  .text-comfortable {
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+
+  .bg-soft {
+    background-color: var(--surface);
+  }
+
+  .border-subtle {
+    border-color: var(--border-soft);
+  }
+
+  .border-hard {
+    border-color: var(--border-hard);
+  }
+
+  /* Interactive states with better feedback */
+  .interactive {
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* saturn-specific color utilities */
+  .bg-saturn-input {
+    background-color: rgba(180, 183, 200, 0.08);
+  }
+
+  .border-saturn {
+    border-color: rgba(180, 183, 200, 0.2);
+  }
+
+  .text-saturn-muted {
+    color: #c3c3cc;
+  }
+
+  .text-saturn-secondary {
+    color: #a1a1aa;
+  }
+
+  /* saturn input field styling - Light theme */
+  .saturn-input {
+    background-color: #f8fafc !important;
+    border: 1px solid #d1d5db !important;
+    color: #1e293b !important;
+  }
+
+  .saturn-input:focus {
+    border-color: #6366f1 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+  }
+
+  .saturn-input::placeholder {
+    color: #64748b !important;
+  }
+
+  /* saturn select styling - Light theme */
+  .saturn-select {
+    background-color: #f8fafc !important;
+    border: 1px solid #d1d5db !important;
+    color: #1e293b !important;
+  }
+
+  .saturn-select:focus {
+    border-color: #6366f1 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+  }
+
+  /* saturn textarea styling - Light theme */
+  .saturn-textarea {
+    background-color: #f8fafc !important;
+    border: 1px solid #d1d5db !important;
+    color: #1e293b !important;
+  }
+
+  .saturn-textarea:focus {
+    border-color: #6366f1 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+  }
+
+  .saturn-textarea::placeholder {
+    color: #64748b !important;
+  }
+
+  /* Dark theme overrides */
+  .dark .saturn-input {
+    background-color: #1e1e2a !important;
+    border: 1px solid #2d2d3a !important;
+    color: #ffffff !important;
+  }
+
+  .dark .saturn-input::placeholder {
+    color: #a1a1aa !important;
+  }
+
+  .dark .saturn-select {
+    background-color: #1e1e2a !important;
+    border: 1px solid #2d2d3a !important;
+    color: #ffffff !important;
+  }
+
+  .dark .saturn-textarea {
+    background-color: #1e1e2a !important;
+    border: 1px solid #2d2d3a !important;
+    color: #ffffff !important;
+  }
+
+  .dark .saturn-textarea::placeholder {
+    color: #a1a1aa !important;
+  }
+
+  /* saturn calendar styling */
+  .saturn-calendar {
+    background-color: var(--card-bg) !important;
+    border: 1px solid #474853 !important;
+    border-radius: 0.5rem !important;
+  }
+
+  .saturn-calendar .rdp-day_button {
+    border: 1px solid transparent !important;
+  }
+
+  .saturn-calendar .rdp-day_button:hover {
+    background-color: var(--muted) !important;
+    border-color: #474853 !important;
+  }
+
+  .saturn-calendar .rdp-day_button[data-selected] {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border-color: var(--primary) !important;
+  }
+
+  /* Enhanced text selection UX */
+  ::selection {
+    background-color: rgba(99, 102, 241, 0.25); /* Primary with transparency for better visibility */
+    color: var(--foreground);
+    text-shadow: none;
+  }
+
+  ::-moz-selection {
+    background-color: rgba(99, 102, 241, 0.25);
+    color: var(--foreground);
+    text-shadow: none;
+  }
+
+  /* Dark mode selection */
+  .dark ::selection {
+    background-color: rgba(99, 102, 241, 0.4);
+    color: var(--foreground);
+  }
+
+  .dark ::-moz-selection {
+    background-color: rgba(99, 102, 241, 0.4);
+    color: var(--foreground);
+  }
+
+  /* Smooth text selection experience - make text easily selectable by default */
+  body {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Cursor best practices: minimal, predictable */
+  /* Show pointer only on interactive controls */
+  button:not(:disabled),
+  [role="button"],
+  [role="link"],
+  summary,
+  a[href] {
+    cursor: pointer;
+  }
+
+  /* Indicate disabled state consistently */
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Non-selectable elements */
+  svg, img, canvas, video {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    pointer-events: auto;
+  }
+
+  /* Selection utilities (do not override cursor) */
+  .select-text p,
+  .select-text span,
+  .select-text h1,
+  .select-text h2,
+  .select-text h3,
+  .select-text h4,
+  .select-text h5,
+  .select-text h6,
+  .select-text li,
+  .select-text td,
+  .select-text th,
+  .select-text label {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Enhanced selection utility class for optimal text selection UX */
+  .select-text,
+  [class*="select-text"] {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Ensure text selection works smoothly in select-text containers */
+  .select-text p,
+  .select-text span,
+  .select-text div:not(button):not([role="button"]),
+  .select-text h1,
+  .select-text h2,
+  .select-text h3,
+  .select-text h4,
+  .select-text h5,
+  .select-text h6 {
+    pointer-events: auto;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Fix grid layout text selection - ensure grid items don't block pointer events */
+  .grid.select-text,
+  [class*="grid"].select-text {
+    pointer-events: auto;
+  }
+
+  .grid.select-text > *,
+  [class*="grid"].select-text > * {
+    pointer-events: auto;
+  }
+
+  /* Ensure text elements inside grid containers are selectable */
+  .grid.select-text p,
+  .grid.select-text span,
+  .grid.select-text h1,
+  .grid.select-text h2,
+  .grid.select-text h3,
+  .grid.select-text h4,
+  .grid.select-text h5,
+  .grid.select-text h6 {
+    pointer-events: auto !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+
+  /* Mobile responsive grid: reset column positioning on mobile */
+  /* Override inline styles to force single column layout on mobile */
+  @media (max-width: 767px) {
+    /* Target all direct children of grids that have responsive grid classes */
+    .grid[class*="grid-cols-1"] > *,
+    .grid[class*="md:grid-cols"] > *,
+    .grid.grid-cols-1 > * {
+      grid-column: 1 / -1 !important;
+      grid-row: auto !important;
+    }
+    
+    /* Override inline grid-column styles specifically for grid items */
+    .grid.select-text > div[style*="grid-column"],
+    .grid[class*="grid-cols"] > div[style*="grid-column"] {
+      grid-column: 1 / -1 !important;
+    }
+  }
+
+  /* Design System Spacing Utilities */
+  .spacing-xs { gap: 0.25rem; }
+  .spacing-sm { gap: 0.5rem; }
+  .spacing-md { gap: 0.75rem; }
+  .spacing-lg { gap: 1rem; }
+  .spacing-xl { gap: 1.5rem; }
+  .spacing-2xl { gap: 2rem; }
+  .spacing-3xl { gap: 3rem; }
+
+  /* Consistent padding utilities */
+  .padding-xs { padding: 0.25rem; }
+  .padding-sm { padding: 0.5rem; }
+  .padding-md { padding: 0.75rem; }
+  .padding-lg { padding: 1rem; }
+  .padding-xl { padding: 1.5rem; }
+
+  /* Consistent margin utilities */
+  .margin-xs { margin: 0.25rem; }
+  .margin-sm { margin: 0.5rem; }
+  .margin-md { margin: 0.75rem; }
+  .margin-lg { margin: 1rem; }
+  .margin-xl { margin: 1.5rem; }
+
+  /* Alignment utilities */
+  .align-items-center { align-items: center; }
+  .align-items-start { align-items: flex-start; }
+  .align-items-end { align-items: flex-end; }
+  .justify-content-center { justify-content: center; }
+  .justify-content-between { justify-content: space-between; }
+  .justify-content-start { justify-content: flex-start; }
+  .justify-content-end { justify-content: flex-end; }
+
+  /* Improved scrollbar for better visibility */
+  .scrollbar-visible {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-thumb {
+    background-color: var(--muted-foreground);
+    border-radius: 4px;
+    opacity: 0.6;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+    opacity: 0.8;
+  }
+}
+
+
+
+  /* Stable scrollbar gutter utility */
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+
+  .scrollbar-gutter-stable::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  .scrollbar-gutter-stable::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-gutter-stable::-webkit-scrollbar-thumb {
+    background-color: var(--muted-foreground);
+    border-radius: 4px;
+    opacity: 0.6;
+  }
+
+  .scrollbar-gutter-stable::-webkit-scrollbar-thumb:hover {
+    opacity: 0.8;
+  }
+
+  /* Theme-aware thin scrollbar utility */
+  .rb-scroll-thin {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--scrollbar-thumb) transparent; /* thumb, track */
+  }
+  .rb-scroll-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    background: transparent !important;
+  }
+  .rb-scroll-thin::-webkit-scrollbar-track {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .rb-scroll-thin::-webkit-scrollbar-track-piece {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .rb-scroll-thin::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    opacity: 0.5;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+  .rb-scroll-thin::-webkit-scrollbar-corner {
+    background: transparent !important;
+  }
+  
+  .icon-grid-container {
+    --grid-cols: 1;
+    grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+    width: 100%;
+  }
+  
+  @media (min-width: 768px) {
+    .icon-grid-container {
+      --grid-cols: 4;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .icon-grid-container {
+      --grid-cols: 6;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .icon-grid-container {
+      --grid-cols: 8;
+    }
+  }
+  
+  .icon-grid-item {
+    width: 100%;
+  }
+  
