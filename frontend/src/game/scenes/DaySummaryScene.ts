@@ -68,7 +68,7 @@ export class DaySummaryScene extends Phaser.Scene {
       y += 18
     } else {
       // Header
-      this.add.text(40, y, 'Side    Stock   Qty    Price      NPC', {
+      this.add.text(40, y, 'Side    Stock   Notional   Shares   Price      NPC', {
         fontSize: '9px',
         fontFamily: 'monospace',
         color: '#64748b',
@@ -79,7 +79,7 @@ export class DaySummaryScene extends Phaser.Scene {
       const trades = gameState.todayTrades.slice(0, maxVisible)
       for (const trade of trades) {
         const color = trade.side === 'BUY' ? '#4ade80' : '#f87171'
-        const line = `${trade.side.padEnd(7)} ${trade.ticker.padEnd(7)} ${String(trade.quantity).padEnd(6)} $${trade.price.toFixed(2).padEnd(10)} ${trade.npcName}`
+        const line = `${trade.side.padEnd(7)} ${trade.ticker.padEnd(7)} $${trade.notional.toLocaleString().padEnd(9)} ${trade.quantity.toFixed(1).padEnd(8)} $${trade.price.toFixed(2).padEnd(10)} ${trade.npcName}`
         this.add.text(40, y, line, {
           fontSize: '9px',
           fontFamily: 'monospace',
@@ -176,7 +176,7 @@ export class DaySummaryScene extends Phaser.Scene {
         this.add.text(
           40,
           y,
-          `  ${pos.ticker}: ${side} ${Math.abs(pos.quantity)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} (${posPnl >= 0 ? '+' : ''}$${posPnl.toFixed(2)})`,
+          `  ${pos.ticker}: ${side} ${Math.abs(pos.quantity).toFixed(1)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} (${posPnl >= 0 ? '+' : ''}$${posPnl.toFixed(2)})`,
           {
             fontSize: '9px',
             fontFamily: 'monospace',

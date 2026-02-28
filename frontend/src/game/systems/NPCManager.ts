@@ -1,11 +1,11 @@
 import type { NPCQuote, TraderDef } from '../types'
 import { marketData } from './MarketDataEngine'
 
-// Spread amounts by style (in dollars)
-const SPREAD_MAP = {
-  tight: 0.125,
-  normal: 0.25,
-  wide: 0.5,
+// Half-spread as a fraction of current price (percentage-based)
+const SPREAD_PCT_MAP = {
+  tight: 0.0025,  // 0.25% half-spread → ~0.5% round-trip
+  normal: 0.005,  // 0.5%  half-spread → ~1% round-trip
+  wide: 0.01,     // 1.0%  half-spread → ~2% round-trip
 } as const
 
 export class NPCManager {
@@ -19,10 +19,10 @@ export class NPCManager {
     const currentPrice = marketData.getPrice(trader.ticker)
     if (currentPrice === null) return null
 
-    const halfSpread = SPREAD_MAP[trader.spreadStyle]
+    const halfSpread = currentPrice * SPREAD_PCT_MAP[trader.spreadStyle]
 
-    // Add small random noise (±$0.0625) to feel organic
-    const noise = (Math.random() - 0.5) * 0.125
+    // Add small random noise (±0.1% of price) to feel organic
+    const noise = currentPrice * (Math.random() - 0.5) * 0.002
 
     const bid = Math.round((currentPrice - halfSpread + noise) * 100) / 100
     const ask = Math.round((currentPrice + halfSpread + noise) * 100) / 100

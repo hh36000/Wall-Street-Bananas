@@ -83,6 +83,14 @@ export class MarketDataEngine {
     return this.priceIndex.get(`${ticker}:${prevDate}`) ?? null
   }
 
+  getNextPrice(ticker: string, date?: string): number | null {
+    const d = date ?? this.currentDate
+    const idx = this.tradingDates.indexOf(d)
+    if (idx < 0 || idx >= this.tradingDates.length - 1) return null
+    const nextDate = this.tradingDates[idx + 1]
+    return this.priceIndex.get(`${ticker}:${nextDate}`) ?? null
+  }
+
   getPriceChange(ticker: string, date?: string): { change: number; pctChange: number } | null {
     const d = date ?? this.currentDate
     const current = this.getPrice(ticker, d)

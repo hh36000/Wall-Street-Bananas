@@ -2,24 +2,30 @@ import Phaser from 'phaser'
 import { gameState } from '../GameState'
 import { tradingSystem } from '../systems/TradingSystem'
 import { npcManager } from '../systems/NPCManager'
+import { marketData } from '../systems/MarketDataEngine'
 import type { TraderDef, NPCQuote } from '../types'
-
-const TRADE_QUANTITY_OPTIONS = [10, 25, 50, 100]
 
 export class TradingUIScene extends Phaser.Scene {
   private dialogOpen = false
   private dialogContainer!: Phaser.GameObjects.Container
   private activeTrader: TraderDef | null = null
   private activeQuote: NPCQuote | null = null
-  private tradeQuantity = 50
   private dialogTexts: Map<string, Phaser.GameObjects.Text> = new Map()
 
   private hudContainer!: Phaser.GameObjects.Container
   private hudTexts: Map<string, Phaser.GameObjects.Text> = new Map()
 
+  private flattenBtn!: Phaser.GameObjects.Rectangle
+  private flattenLabel!: Phaser.GameObjects.Text
+
+  private cheatContainer!: Phaser.GameObjects.Container
+  private cheatVisible = false
+
   private escKey!: Phaser.Input.Keyboard.Key
   private buyKey!: Phaser.Input.Keyboard.Key
   private sellKey!: Phaser.Input.Keyboard.Key
+  private flattenKey!: Phaser.Input.Keyboard.Key
+  private cheatKeyHandler!: (e: KeyboardEvent) => void
 
   constructor() {
     super('TradingUIScene')
@@ -32,9 +38,16 @@ export class TradingUIScene extends Phaser.Scene {
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
     this.buyKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
     this.sellKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S)
+    this.flattenKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
 
     this.escKey.on('down', (event: KeyboardEvent) => {
       if (event.repeat || !this.dialogOpen) return
+      // Close cheat overlay first, then dialog
+      if (this.cheatVisible) {
+        this.cheatVisible = false
+        this.cheatContainer.setVisible(false)
+        return
+      }
       this.closeTradeDialog()
     })
 
@@ -46,6 +59,24 @@ export class TradingUIScene extends Phaser.Scene {
     this.sellKey.on('down', (event: KeyboardEvent) => {
       if (event.repeat || !this.dialogOpen) return
       this.executeTrade('SELL')
+    })
+
+    this.flattenKey.on('down', (event: KeyboardEvent) => {
+      if (event.repeat || !this.dialogOpen) return
+      this.executeFlatten()
+    })
+
+    // Cmd+/ (or Ctrl+/) to toggle cheat overlay
+    this.cheatKeyHandler = (e: KeyboardEvent) => {
+      if (e.key === '/' && (e.metaKey || e.ctrlKey) && this.dialogOpen) {
+        e.preventDefault()
+        this.toggleCheat()
+      }
+    }
+    window.addEventListener('keydown', this.cheatKeyHandler)
+
+    this.events.on('shutdown', () => {
+      window.removeEventListener('keydown', this.cheatKeyHandler)
     })
   }
 
@@ -67,8 +98,12 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogTexts.get('greeting')!.setText(`"${trader.greeting}"`)
     this.dialogTexts.get('result')!.setText('')
 
-    this.tradeQuantity = tradingSystem.getDefaultQuantity(this.activeQuote.ask)
-    this.updateDialogQuantity()
+    // Reset cheat overlay
+    this.cheatVisible = false
+    this.cheatContainer.setVisible(false)
+    this.updateCheatInfo()
+
+    this.updateTradeInfo()
 
     this.dialogContainer.setVisible(true)
   }
@@ -134,34 +169,15 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(greetingText)
     this.dialogTexts.set('greeting', greetingText)
 
-    const qtyLabel = this.add.text(-dw / 2 + 30, dh / 2 - 155, 'Shares:', {
-      fontSize: '14px',
-      fontFamily: 'monospace',
-      color: '#94a3b8',
-    })
-    this.dialogContainer.add(qtyLabel)
-
-    let qx = -dw / 2 + 140
-    for (const qty of TRADE_QUANTITY_OPTIONS) {
-      const qBtn = this.add.rectangle(qx, dh / 2 - 150, 50, 24, 0x334155)
-      qBtn.setInteractive({ useHandCursor: true })
-      const qBtnText = this.add
-        .text(qx, dh / 2 - 150, `${qty}`, {
-          fontSize: '13px',
-          fontFamily: 'monospace',
-          color: '#e2e8f0',
-        })
-        .setOrigin(0.5)
-      qBtn.on('pointerdown', () => {
-        this.tradeQuantity = qty
-        this.updateDialogQuantity()
+    const notionalLabel = this.add
+      .text(0, dh / 2 - 150, '', {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#e2e8f0',
       })
-      qBtn.on('pointerover', () => qBtn.setFillStyle(0x475569))
-      qBtn.on('pointerout', () => qBtn.setFillStyle(0x334155))
-      this.dialogContainer.add(qBtn)
-      this.dialogContainer.add(qBtnText)
-      qx += 60
-    }
+      .setOrigin(0.5)
+    this.dialogContainer.add(notionalLabel)
+    this.dialogTexts.set('notional', notionalLabel)
 
     const costText = this.add
       .text(0, dh / 2 - 118, '', {
@@ -187,8 +203,26 @@ export class TradingUIScene extends Phaser.Scene {
       this.closeTradeDialog()
     )
 
+    // Flatten button — only visible when holding a position
+    const flattenY = btnY + btnH / 2 + 18
+    this.flattenBtn = this.add.rectangle(0, flattenY, 200, 22, 0x854d0e)
+    this.flattenBtn.setInteractive({ useHandCursor: true })
+    this.flattenBtn.on('pointerover', () => this.flattenBtn.setAlpha(0.8))
+    this.flattenBtn.on('pointerout', () => this.flattenBtn.setAlpha(1))
+    this.flattenBtn.on('pointerdown', () => this.executeFlatten())
+    this.dialogContainer.add(this.flattenBtn)
+
+    this.flattenLabel = this.add
+      .text(0, flattenY, 'FLATTEN (F)', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#fbbf24',
+      })
+      .setOrigin(0.5)
+    this.dialogContainer.add(this.flattenLabel)
+
     const resultText = this.add
-      .text(0, dh / 2 - 22, '', {
+      .text(0, dh / 2 - 10, '', {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#4ade80',
@@ -196,6 +230,56 @@ export class TradingUIScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.dialogContainer.add(resultText)
     this.dialogTexts.set('result', resultText)
+
+    // Cheat button — small "?" in bottom-right corner of panel
+    const cheatBtn = this.add.rectangle(dw / 2 - 18, dh / 2 - 18, 24, 24, 0x7c3aed, 0.8)
+    cheatBtn.setInteractive({ useHandCursor: true })
+    cheatBtn.on('pointerover', () => cheatBtn.setAlpha(0.6))
+    cheatBtn.on('pointerout', () => cheatBtn.setAlpha(1))
+    cheatBtn.on('pointerdown', () => this.toggleCheat())
+    this.dialogContainer.add(cheatBtn)
+
+    const cheatBtnLabel = this.add
+      .text(dw / 2 - 18, dh / 2 - 18, '?', {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#e9d5ff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+    this.dialogContainer.add(cheatBtnLabel)
+
+    // Cheat info overlay
+    this.cheatContainer = this.add.container(0, 0)
+    this.cheatContainer.setVisible(false)
+
+    const cheatBg = this.add.rectangle(0, 0, dw - 40, 120, 0x1e1b4b, 0.95)
+    cheatBg.setStrokeStyle(1, 0x7c3aed)
+    this.cheatContainer.add(cheatBg)
+
+    const cheatTitle = this.add
+      .text(0, -42, 'CHEAT SHEET', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#a78bfa',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+    this.cheatContainer.add(cheatTitle)
+
+    const cheatInfo = this.add
+      .text(0, 0, '', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#e9d5ff',
+        align: 'center',
+        lineSpacing: 4,
+      })
+      .setOrigin(0.5)
+    this.cheatContainer.add(cheatInfo)
+    this.dialogTexts.set('cheatInfo', cheatInfo)
+
+    this.dialogContainer.add(this.cheatContainer)
   }
 
   private createDialogButton(
@@ -225,28 +309,43 @@ export class TradingUIScene extends Phaser.Scene {
     this.dialogContainer.add(text)
   }
 
-  private updateDialogQuantity(): void {
+  private updateTradeInfo(): void {
     if (!this.activeQuote || !this.activeTrader) return
 
     const ticker = this.activeTrader.ticker!
-    const buyCost = (this.tradeQuantity * this.activeQuote.ask).toFixed(2)
-    const sellProceeds = (this.tradeQuantity * this.activeQuote.bid).toFixed(2)
+    const notional = gameState.tradeNotional
+    const buyQty = tradingSystem.getTradeQuantity(this.activeQuote.ask)
+    const sellQty = tradingSystem.getTradeQuantity(this.activeQuote.bid)
+
+    this.dialogTexts.get('notional')!.setText(`$${this.fmt(notional)} per trade`)
+
     const buyExposure = tradingSystem.getProjectedPositionMarketValue(
       ticker,
-      this.tradeQuantity,
+      buyQty,
       this.activeQuote.ask
     )
     const sellExposure = tradingSystem.getProjectedPositionMarketValue(
       ticker,
-      -this.tradeQuantity,
+      -sellQty,
       this.activeQuote.bid
     )
 
     this.dialogTexts
       .get('cost')!
       .setText(
-        `${this.tradeQuantity} shares — Buy: $${buyCost}  |  Sell: $${sellProceeds}\nNext exposure — Buy: ${this.formatSignedDollars(buyExposure)}  |  Sell: ${this.formatSignedDollars(sellExposure)}`
+        `Buy: ${this.fmt(buyQty)} shares  |  Sell: ${this.fmt(sellQty)} shares\nNext exposure — Buy: ${this.formatSignedDollars(buyExposure)}  |  Sell: ${this.formatSignedDollars(sellExposure)}`
       )
+
+    // Show flatten button only when holding a position in this ticker
+    const pos = gameState.positions.get(ticker)
+    const hasPosition = !!pos && pos.quantity !== 0
+    this.flattenBtn.setVisible(hasPosition)
+    this.flattenLabel.setVisible(hasPosition)
+    if (hasPosition) {
+      const side = pos!.quantity > 0 ? 'LONG' : 'SHORT'
+      const qty = Math.abs(pos!.quantity)
+      this.flattenLabel.setText(`FLATTEN ${side} ${this.fmt(qty)} (F)`)
+    }
   }
 
   private executeTrade(side: 'BUY' | 'SELL'): void {
@@ -254,37 +353,89 @@ export class TradingUIScene extends Phaser.Scene {
 
     const price = side === 'BUY' ? this.activeQuote.ask : this.activeQuote.bid
     const ticker = this.activeTrader.ticker!
+    const quantity = tradingSystem.getTradeQuantity(price)
 
     let success = false
     if (side === 'BUY') {
-      success = tradingSystem.buy(
-        ticker,
-        this.tradeQuantity,
-        price,
-        this.activeTrader.id,
-        this.activeTrader.nickname
-      )
+      success = tradingSystem.buy(ticker, price, this.activeTrader.id, this.activeTrader.nickname)
     } else {
-      success = tradingSystem.sell(
-        ticker,
-        this.tradeQuantity,
-        price,
-        this.activeTrader.id,
-        this.activeTrader.nickname
-      )
+      success = tradingSystem.sell(ticker, price, this.activeTrader.id, this.activeTrader.nickname)
     }
 
     const resultText = this.dialogTexts.get('result')!
     if (success) {
       const verb = side === 'BUY' ? 'Bought' : 'Sold'
       resultText.setColor('#4ade80')
-      resultText.setText(`${verb} ${this.tradeQuantity} ${ticker} @ $${price.toFixed(2)}`)
-      this.updateDialogQuantity()
+      resultText.setText(
+        `${verb} ${this.fmt(quantity)} ${ticker} @ $${this.fmt(price)} ($${this.fmt(gameState.tradeNotional)})`
+      )
+      this.updateTradeInfo()
       this.updateHUD()
     } else {
       resultText.setColor('#f87171')
       resultText.setText('Trade rejected — projected exposure or debt limit exceeded')
     }
+  }
+
+  private executeFlatten(): void {
+    if (!this.activeTrader || !this.activeQuote) return
+
+    const ticker = this.activeTrader.ticker!
+    const pos = gameState.positions.get(ticker)
+    if (!pos || pos.quantity === 0) return
+
+    // Close longs at bid, close shorts at ask
+    const price = pos.quantity > 0 ? this.activeQuote.bid : this.activeQuote.ask
+    const side = pos.quantity > 0 ? 'LONG' : 'SHORT'
+    const closedQty = tradingSystem.flatten(
+      ticker,
+      price,
+      this.activeTrader.id,
+      this.activeTrader.nickname
+    )
+
+    const resultText = this.dialogTexts.get('result')!
+    if (closedQty > 0) {
+      const notional = closedQty * price
+      resultText.setColor('#fbbf24')
+      resultText.setText(
+        `Flattened ${side} ${this.fmt(closedQty)} ${ticker} @ $${this.fmt(price)} ($${this.fmt(notional)})`
+      )
+      this.updateTradeInfo()
+      this.updateHUD()
+    }
+  }
+
+  private toggleCheat(): void {
+    this.cheatVisible = !this.cheatVisible
+    this.cheatContainer.setVisible(this.cheatVisible)
+  }
+
+  private updateCheatInfo(): void {
+    if (!this.activeTrader) return
+
+    const trader = this.activeTrader
+    const ticker = trader.ticker ?? '—'
+    const todayPrice = marketData.getPrice(ticker)
+    const tomorrowPrice = marketData.getNextPrice(ticker)
+    const spreadPct = { tight: '0.5%', normal: '1%', wide: '2%' }[trader.spreadStyle]
+
+    const lines = [
+      `${trader.name}  |  ${ticker}`,
+      `Spread: ${trader.spreadStyle.toUpperCase()} (~${spreadPct} round-trip)`,
+      `Today close: $${todayPrice?.toFixed(2) ?? '?'}`,
+    ]
+
+    if (todayPrice != null && tomorrowPrice != null) {
+      const chg = tomorrowPrice - todayPrice
+      const chgPct = (chg / todayPrice) * 100
+      const sign = chg >= 0 ? '+' : ''
+      lines.push(`Tomorrow: $${tomorrowPrice.toFixed(2)} (${sign}${chgPct.toFixed(2)}%)`)
+    } else {
+      lines.push('Tomorrow: —')
+    }
+
+    this.dialogTexts.get('cheatInfo')!.setText(lines.join('\n'))
   }
 
   private buildHUD(): void {
@@ -385,21 +536,21 @@ export class TradingUIScene extends Phaser.Scene {
 
   private updateHUD(): void {
     const capitalText = this.hudTexts.get('capital')!
-    capitalText.setText(`Cash: $${gameState.capital.toFixed(2)}`)
+    capitalText.setText(`Cash: $${this.fmt(gameState.capital)}`)
     capitalText.setColor(gameState.capital >= 0 ? '#4ade80' : '#f87171')
 
     const todayPnl = tradingSystem.getTodayRealizedPnl() + tradingSystem.getUnrealizedPnl()
     const pnlText = this.hudTexts.get('pnl')!
     const pnlSign = todayPnl >= 0 ? '+' : ''
-    pnlText.setText(`P&L: ${pnlSign}$${todayPnl.toFixed(2)}`)
+    pnlText.setText(`P&L: ${pnlSign}$${this.fmt(todayPnl)}`)
     pnlText.setColor(todayPnl >= 0 ? '#4ade80' : '#f87171')
 
     const netExposure = tradingSystem.getNetMarketExposure()
     const grossExposure = tradingSystem.getGrossMarketExposure()
     this.hudTexts
       .get('exposure')!
-      .setText(`Net Exp: ${this.formatSignedDollars(netExposure)}  Gross: $${grossExposure.toFixed(0)}`)
-    this.hudTexts.get('limit')!.setText(`Limit: ±$${gameState.maxPositionValue.toFixed(0)}`)
+      .setText(`Net Exp: ${this.formatSignedDollars(netExposure)}  Gross: $${this.fmt(grossExposure)}`)
+    this.hudTexts.get('limit')!.setText(`Limit: ±$${this.fmt(gameState.maxPositionValue)}`)
 
     this.hudTexts.get('day')!.setText(`Day ${gameState.dayNumber}`)
 
@@ -420,7 +571,7 @@ export class TradingUIScene extends Phaser.Scene {
       const side = pos.quantity >= 0 ? 'LONG' : 'SHORT'
       const marketValue = tradingSystem.getPositionMarketValue(pos.ticker)
       posLines.push(
-        `${pos.ticker} ${side} ${Math.abs(pos.quantity)} | MV ${this.formatSignedDollars(marketValue)}`
+        `${pos.ticker} ${side} ${this.fmt(Math.abs(pos.quantity))} | MV ${this.formatSignedDollars(marketValue)}`
       )
     }
     if (posLines.length === 0) {
@@ -435,8 +586,12 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudTexts.get('positions')!.setText(visibleLines.join('\n'))
   }
 
+  private fmt(value: number): string {
+    return Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
   private formatSignedDollars(value: number): string {
     const sign = value >= 0 ? '+' : '-'
-    return `${sign}$${Math.abs(value).toFixed(0)}`
+    return `${sign}$${this.fmt(value)}`
   }
 }

@@ -74,10 +74,18 @@ export class TradingSystem {
   }
 
   /**
-   * Execute a buy trade. Returns true if successful.
+   * Compute share quantity for a fixed-notional trade.
    */
-  buy(ticker: string, quantity: number, price: number, npcId: string, npcName: string): boolean {
-    const cost = quantity * price
+  getTradeQuantity(price: number): number {
+    return gameState.tradeNotional / price
+  }
+
+  /**
+   * Execute a buy trade at fixed notional. Returns true if successful.
+   */
+  buy(ticker: string, price: number, npcId: string, npcName: string): boolean {
+    const quantity = this.getTradeQuantity(price)
+    const cost = gameState.tradeNotional
 
     // Margin is enforced against projected net market-value exposure.
     if (this.wouldExceedMargin(ticker, quantity, price)) {
@@ -121,6 +129,7 @@ export class TradingSystem {
       ticker,
       side: 'BUY',
       quantity,
+      notional: gameState.tradeNotional,
       price,
       npcId,
       npcName,
@@ -132,10 +141,11 @@ export class TradingSystem {
   }
 
   /**
-   * Execute a sell trade. Returns true if successful.
+   * Execute a sell trade at fixed notional. Returns true if successful.
    */
-  sell(ticker: string, quantity: number, price: number, npcId: string, npcName: string): boolean {
-    const proceeds = quantity * price
+  sell(ticker: string, price: number, npcId: string, npcName: string): boolean {
+    const quantity = this.getTradeQuantity(price)
+    const proceeds = gameState.tradeNotional
     const existing = gameState.positions.get(ticker)
     const isReducingExistingLong =
       !!existing && existing.quantity > 0 && quantity <= existing.quantity
@@ -177,6 +187,7 @@ export class TradingSystem {
       ticker,
       side: 'SELL',
       quantity,
+      notional: gameState.tradeNotional,
       price,
       npcId,
       npcName,
@@ -185,6 +196,42 @@ export class TradingSystem {
     gameState.allTrades.push(trade)
 
     return true
+  }
+
+  /**
+   * Close an entire position at the given price. Returns the quantity closed, or 0 if no position.
+   */
+  flatten(ticker: string, price: number, npcId: string, npcName: string): number {
+    const existing = gameState.positions.get(ticker)
+    if (!existing || existing.quantity === 0) return 0
+
+    const quantity = Math.abs(existing.quantity)
+    const notional = quantity * price
+    const side: 'BUY' | 'SELL' = existing.quantity > 0 ? 'SELL' : 'BUY'
+
+    if (side === 'SELL') {
+      gameState.capital += notional
+    } else {
+      gameState.capital -= notional
+    }
+
+    gameState.positions.delete(ticker)
+
+    const trade: Trade = {
+      day: gameState.dayNumber,
+      date: gameState.currentDate,
+      ticker,
+      side,
+      quantity,
+      notional,
+      price,
+      npcId,
+      npcName,
+    }
+    gameState.todayTrades.push(trade)
+    gameState.allTrades.push(trade)
+
+    return quantity
   }
 
   /**
@@ -284,15 +331,6 @@ export class TradingSystem {
     gameState.phase = 'trading'
   }
 
-  /**
-   * Get default trade quantity based on capital and price
-   */
-  getDefaultQuantity(price: number): number {
-    // Target ~10% of max position value per trade
-    const targetValue = gameState.maxPositionValue * 0.1
-    const qty = Math.floor(targetValue / price)
-    return Math.max(10, Math.min(qty, 500)) // min 10, max 500 shares
-  }
 }
 
 export const tradingSystem = new TradingSystem()

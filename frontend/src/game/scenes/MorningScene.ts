@@ -14,6 +14,13 @@ export class MorningScene extends Phaser.Scene {
 
     const { width, height } = this.scale
 
+    // Number formatting: 2 decimals + commas
+    const fmt = (v: number, decimals = 2) =>
+      v.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })
+
     // Dark background
     this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a1a)
 
@@ -74,7 +81,7 @@ export class MorningScene extends Phaser.Scene {
         .text(
           width / 2,
           newsY,
-          `${arrow} ${mover.ticker}: $${price.toFixed(2)} (${mover.pctChange >= 0 ? '+' : ''}${mover.pctChange.toFixed(1)}%)`,
+          `${arrow} ${mover.ticker}: $${fmt(price)} (${mover.pctChange >= 0 ? '+' : ''}${fmt(mover.pctChange)}%)`,
           {
             fontSize: '13px',
             fontFamily: 'monospace',
@@ -96,7 +103,7 @@ export class MorningScene extends Phaser.Scene {
           .text(
             width / 2,
             infoY,
-            `Yesterday's P&L: ${pnlSign}$${lastResult.netPnl.toFixed(2)}`,
+            `Yesterday's P&L: ${pnlSign}$${fmt(Math.abs(lastResult.netPnl))}`,
             {
               fontSize: '14px',
               fontFamily: 'monospace',
@@ -111,7 +118,7 @@ export class MorningScene extends Phaser.Scene {
     // Capital
     const capitalColor = gameState.capital >= 0 ? '#4ade80' : '#f87171'
     this.add
-      .text(width / 2, infoY, `Capital: $${gameState.capital.toFixed(2)}`, {
+      .text(width / 2, infoY, `Capital: $${fmt(gameState.capital)}`, {
         fontSize: '18px',
         fontFamily: 'monospace',
         color: capitalColor,
@@ -136,39 +143,168 @@ export class MorningScene extends Phaser.Scene {
       infoY += 25
     }
 
-    // Open positions
+    // Portfolio exposure table
     if (gameState.positions.size > 0) {
-      infoY += 10
+      const fmtPct = (v: number) =>
+        `${v >= 0 ? '+' : ''}${fmt(v)}%`
+      const clr = (v: number) => (v >= 0 ? '#4ade80' : '#f87171')
+
+      infoY += 5
       this.add
-        .text(width / 2, infoY, 'Open Positions:', {
+        .text(width / 2, infoY, '──── PORTFOLIO ────', {
           fontSize: '13px',
           fontFamily: 'monospace',
-          color: '#94a3b8',
+          color: '#facc15',
         })
         .setOrigin(0.5)
       infoY += 20
 
+      // Column right-edge positions (right-aligned except TKR)
+      const col = {
+        tkr: 200,
+        yday: 320,
+        today: 430,
+        chg: 530,
+        shrs: 620,
+        cost: 740,
+        mv: 860,
+        onPct: 980,
+        totPct: 1100,
+      }
+      const hdr = { fontSize: '10px', fontFamily: 'monospace', color: '#64748b' }
+      const cell = { fontSize: '10px', fontFamily: 'monospace', color: '#e2e8f0' }
+
+      // Column headers
+      this.add.text(col.tkr, infoY, 'TKR', hdr)
+      this.add.text(col.yday, infoY, 'YDAY', hdr).setOrigin(1, 0)
+      this.add.text(col.today, infoY, 'TODAY', hdr).setOrigin(1, 0)
+      this.add.text(col.chg, infoY, 'CHG%', hdr).setOrigin(1, 0)
+      this.add.text(col.shrs, infoY, 'SHRS', hdr).setOrigin(1, 0)
+      this.add.text(col.cost, infoY, 'COST', hdr).setOrigin(1, 0)
+      this.add.text(col.mv, infoY, 'MV', hdr).setOrigin(1, 0)
+      this.add.text(col.onPct, infoY, 'O/N%', hdr).setOrigin(1, 0)
+      this.add.text(col.totPct, infoY, 'TOT%', hdr).setOrigin(1, 0)
+      infoY += 14
+
+      // Header underline
+      this.add
+        .text(width / 2, infoY, '─'.repeat(80), {
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          color: '#334155',
+        })
+        .setOrigin(0.5)
+      infoY += 12
+
+      let totalCost = 0
+      let totalMV = 0
+      let totalONPnl = 0
+      let totalPosPnl = 0
+      let totalPrevValue = 0
+
       for (const pos of gameState.positions.values()) {
         const currentPrice = marketData.getPrice(pos.ticker) ?? pos.avgPrice
-        const marketValue = pos.quantity * currentPrice
-        const pnl = (currentPrice - pos.avgPrice) * pos.quantity
-        const pnlColor = pnl >= 0 ? '#4ade80' : '#f87171'
-        const mvSign = marketValue >= 0 ? '+' : '-'
-        const side = pos.quantity >= 0 ? 'LONG' : 'SHORT'
+        const previousPrice =
+          marketData.getPreviousPrice(pos.ticker) ?? pos.avgPrice
+        const absQty = Math.abs(pos.quantity)
+        const side = pos.quantity >= 0 ? 'L' : 'S'
+
+        const costBasis = absQty * pos.avgPrice
+        const mktValue = absQty * currentPrice
+        const prevDayValue = absQty * previousPrice
+        const overnightPnl = (currentPrice - previousPrice) * pos.quantity
+        const positionPnl = (currentPrice - pos.avgPrice) * pos.quantity
+
+        const stockChgPct =
+          previousPrice !== 0
+            ? ((currentPrice - previousPrice) / previousPrice) * 100
+            : 0
+        const onPct =
+          prevDayValue > 0 ? (overnightPnl / prevDayValue) * 100 : 0
+        const totPct =
+          costBasis > 0 ? (positionPnl / costBasis) * 100 : 0
+
+        totalCost += costBasis
+        totalMV += mktValue
+        totalONPnl += overnightPnl
+        totalPosPnl += positionPnl
+        totalPrevValue += prevDayValue
+
+        // Data row
+        this.add.text(col.tkr, infoY, `${pos.ticker} ${side}`, cell)
         this.add
-          .text(
-            width / 2,
-            infoY,
-            `${pos.ticker}: ${side} ${Math.abs(pos.quantity)} | MV ${mvSign}$${Math.abs(marketValue).toFixed(0)} @ $${pos.avgPrice.toFixed(2)}`,
-            {
-              fontSize: '12px',
-              fontFamily: 'monospace',
-              color: pnlColor,
-            }
-          )
-          .setOrigin(0.5)
-        infoY += 18
+          .text(col.yday, infoY, `$${fmt(previousPrice)}`, cell)
+          .setOrigin(1, 0)
+        this.add
+          .text(col.today, infoY, `$${fmt(currentPrice)}`, cell)
+          .setOrigin(1, 0)
+        this.add
+          .text(col.chg, infoY, fmtPct(stockChgPct), {
+            ...cell,
+            color: clr(stockChgPct),
+          })
+          .setOrigin(1, 0)
+        this.add
+          .text(col.shrs, infoY, fmt(absQty, 0), cell)
+          .setOrigin(1, 0)
+        this.add
+          .text(col.cost, infoY, `$${fmt(costBasis)}`, cell)
+          .setOrigin(1, 0)
+        this.add
+          .text(col.mv, infoY, `$${fmt(mktValue)}`, cell)
+          .setOrigin(1, 0)
+        this.add
+          .text(col.onPct, infoY, fmtPct(onPct), {
+            ...cell,
+            color: clr(onPct),
+          })
+          .setOrigin(1, 0)
+        this.add
+          .text(col.totPct, infoY, fmtPct(totPct), {
+            ...cell,
+            color: clr(totPct),
+          })
+          .setOrigin(1, 0)
+        infoY += 16
       }
+
+      // Totals separator
+      this.add
+        .text(width / 2, infoY, '─'.repeat(80), {
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          color: '#334155',
+        })
+        .setOrigin(0.5)
+      infoY += 14
+
+      // Totals row
+      const totalOnPct =
+        totalPrevValue > 0 ? (totalONPnl / totalPrevValue) * 100 : 0
+      const totalTotPct =
+        totalCost > 0 ? (totalPosPnl / totalCost) * 100 : 0
+      const totStyle = { fontSize: '10px', fontFamily: 'monospace', color: '#facc15' }
+
+      this.add.text(col.tkr, infoY, 'TOTAL', totStyle)
+      this.add
+        .text(col.cost, infoY, `$${fmt(totalCost)}`, totStyle)
+        .setOrigin(1, 0)
+      this.add
+        .text(col.mv, infoY, `$${fmt(totalMV)}`, totStyle)
+        .setOrigin(1, 0)
+      this.add
+        .text(col.onPct, infoY, fmtPct(totalOnPct), {
+          ...totStyle,
+          color: clr(totalOnPct),
+        })
+        .setOrigin(1, 0)
+      this.add
+        .text(col.totPct, infoY, fmtPct(totalTotPct), {
+          ...totStyle,
+          color: clr(totalTotPct),
+        })
+        .setOrigin(1, 0)
+      infoY += 20
     }
 
     // Start Trading button
