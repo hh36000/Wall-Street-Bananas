@@ -25,10 +25,10 @@ export class TradingUIScene extends Phaser.Scene {
   private historyContainer!: Phaser.GameObjects.Container
   private historyVisible = false
 
-  private escKey!: Phaser.Input.Keyboard.Key
   private buyKey!: Phaser.Input.Keyboard.Key
   private sellKey!: Phaser.Input.Keyboard.Key
   private flattenKey!: Phaser.Input.Keyboard.Key
+  private leaveKey!: Phaser.Input.Keyboard.Key
   private cheatKeyHandler!: (e: KeyboardEvent) => void
 
   // Chat state
@@ -63,26 +63,10 @@ export class TradingUIScene extends Phaser.Scene {
     this.buildHUD()
     this.buildTickerScroller()
 
-    this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
     this.buyKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
     this.sellKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S)
     this.flattenKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
-
-    this.escKey.on('down', (event: KeyboardEvent) => {
-      if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
-      if (this.historyVisible) {
-        this.historyVisible = false
-        this.historyContainer.setVisible(false)
-        return
-      }
-      if (this.cheatVisible) {
-        this.cheatVisible = false
-        this.cheatContainer.setVisible(false)
-        this.setChatInputVisible(true)
-        return
-      }
-      this.closeTradeDialog()
-    })
+    this.leaveKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.L)
 
     this.buyKey.on('down', (event: KeyboardEvent) => {
       if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
@@ -97,6 +81,11 @@ export class TradingUIScene extends Phaser.Scene {
     this.flattenKey.on('down', (event: KeyboardEvent) => {
       if (event.repeat || !this.dialogOpen || this.isChatFocused()) return
       this.executeFlatten()
+    })
+
+    this.leaveKey.on('down', (event: KeyboardEvent) => {
+      if (event.repeat || !this.dialogOpen) return
+      this.closeTradeDialog()
     })
 
     // Cmd+/ cheat, H history, Cmd+T toggle chat input focus
@@ -340,7 +329,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.createDialogButton(0, btnY, btnW, btnH, 'BUY / LONG (B)', 0x16a34a, () =>
       this.executeTrade('BUY')
     )
-    this.createDialogButton(btnW + 8, btnY, btnW, btnH, 'WALK AWAY (ESC)', 0x475569, () =>
+    this.createDialogButton(btnW + 8, btnY, btnW, btnH, 'LEAVE (L)', 0x475569, () =>
       this.closeTradeDialog()
     )
 

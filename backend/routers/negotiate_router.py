@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-import random
 import asyncio
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -61,16 +60,18 @@ Your weakness is [{weakness}]. You will be more likely to accept a deal if the u
 
 Consider your full history with this trader when deciding how to respond, how to price your market, and whether to accept trades. If they gave you good advice in the past and stocks moved the way they said, trust them more. If they misled you, be skeptical. Relationships can heal over time.
 
+CRITICAL PRICING RULE: The prices you mention in your npc_message MUST EXACTLY match the updated_bid and updated_ask values you return. First decide what your new bid and ask prices are, then write your message referencing those exact numbers. Never say one price in your message but return a different number. For example, if you say "I'll offer at three-fifty", then updated_ask MUST be 3.50. If you aren't moving your prices, updated_bid and updated_ask should remain {current_bid} and {current_ask}.
+
 Stay in character. Keep responses short (1-3 sentences). Be entertaining."""
 
 RESPONSE_SCHEMA = genai.types.Schema(
     type=genai.types.Type.OBJECT,
     required=["npc_message", "trade_accepted", "updated_bid", "updated_ask", "favorability_score"],
     properties={
-        "npc_message": genai.types.Schema(type=genai.types.Type.STRING, description="The message the NPC will say to the user."),
+        "npc_message": genai.types.Schema(type=genai.types.Type.STRING, description="Your in-character response. Any prices you mention in this message MUST exactly match updated_bid and updated_ask."),
         "trade_accepted": genai.types.Schema(type=genai.types.Type.BOOLEAN, description="Whether the trade was accepted or not."),
-        "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated bid price. This is the price you will buy the stock at. It should change if you agree to a trade at a different price"),
-        "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER, description="The updated ask price. This is the price you will sell the stock at. It should change if you agree to a trade at a different price"),
+        "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER, description="Your new bid price (where you buy). Must match any bid price mentioned in npc_message. Keep unchanged if you are not moving your price."),
+        "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER, description="Your new ask/offer price (where you sell). Must match any offer price mentioned in npc_message. Keep unchanged if you are not moving your price."),
         "favorability_score": genai.types.Schema(type=genai.types.Type.NUMBER, description="The favorability score of the trader. This is a number between 0 and 100. 100 is the most favorable, 0 is the least favorable."),
     },
 )
@@ -82,8 +83,6 @@ async def negotiate(req: NegotiateRequest):
     if req.relationship_history:
         relationship_section = f"\nYOUR HISTORY WITH THIS TRADER:\n{req.relationship_history}\n"
 
-    max_move_pct = random.randint(1, 5)
-
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         trader_name=req.trader_name,
         personality=req.trader_personality,
@@ -91,7 +90,6 @@ async def negotiate(req: NegotiateRequest):
         current_bid=f"${req.current_bid:.2f}",
         current_ask=f"${req.current_ask:.2f}",
         weakness=req.trader_weakness,
-        max_move_pct=max_move_pct,
         relationship_history=relationship_section,
     )
 
