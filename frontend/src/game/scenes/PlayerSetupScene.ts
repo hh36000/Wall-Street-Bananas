@@ -17,8 +17,13 @@ export class PlayerSetupScene extends Phaser.Scene {
   create(): void {
     const { width } = this.scale
 
-    // Dark background
-    this.add.rectangle(width / 2, 360, width, 720, 0x0a0a1a)
+    // Video background
+    const vid = this.add.video(width / 2, 360, 'gridpink')
+    vid.play(true)
+    vid.setDisplaySize(width, 720)
+
+    // Semi-transparent overlay for readability
+    this.add.rectangle(width / 2, 360, width, 720, 0x0a0a1a, 0.65)
 
     // Title
     this.add

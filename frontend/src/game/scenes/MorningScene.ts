@@ -43,8 +43,13 @@ export class MorningScene extends Phaser.Scene {
         maximumFractionDigits: decimals,
       })
 
-    // Dark background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a1a)
+    // Video background
+    const vid = this.add.video(width / 2, height / 2, 'gridpink')
+    vid.play(true)
+    vid.setDisplaySize(width, height)
+
+    // Semi-transparent overlay for readability
+    this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a1a, 0.65)
 
     // Title
     this.add

@@ -27,8 +27,13 @@ export class DaySummaryScene extends Phaser.Scene {
 
     tradingSystem.endOfDay()
 
-    // Dark background
-    this.add.rectangle(cx, height / 2, width, height, 0x0a0a1a)
+    // Video background
+    const vid = this.add.video(cx, height / 2, 'gridpink')
+    vid.play(true)
+    vid.setDisplaySize(width, height)
+
+    // Semi-transparent overlay for readability
+    this.add.rectangle(cx, height / 2, width, height, 0x0a0a1a, 0.65)
 
     // ─── Date / Day ───
     this.add
