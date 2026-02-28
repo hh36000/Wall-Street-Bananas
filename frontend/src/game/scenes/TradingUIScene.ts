@@ -840,7 +840,7 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer = this.add.container(0, 0)
     this.hudContainer.setDepth(500)
 
-    const hudBg = this.add.rectangle(cw / 2, 0, cw, 72, 0x0a0a1a, 0.88)
+    const hudBg = this.add.rectangle(cw / 2, 0, cw, 60, 0x0a0a1a, 0.88)
     hudBg.setOrigin(0.5, 0)
     this.hudContainer.add(hudBg)
 
@@ -870,7 +870,7 @@ export class TradingUIScene extends Phaser.Scene {
 
     const dayText = this.add
       .text(cw / 2, 6, '', {
-        fontSize: '15px',
+        fontSize: '13px',
         fontFamily: 'monospace',
         color: '#e2e8f0',
       })
@@ -888,28 +888,8 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer.add(timerText)
     this.hudTexts.set('timer', timerText)
 
-    const limitText = this.add
-      .text(cw / 2, 43, '', {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#64748b',
-      })
-      .setOrigin(0.5, 0)
-    this.hudContainer.add(limitText)
-    this.hudTexts.set('limit', limitText)
-
-    const posText = this.add
-      .text(cw - 16, 6, '', {
-        fontSize: '11px',
-        fontFamily: 'monospace',
-        color: '#94a3b8',
-        align: 'right',
-      })
-      .setOrigin(1, 0)
-    this.hudContainer.add(posText)
-    this.hudTexts.set('positions', posText)
-
-    const endDayBtn = this.add.rectangle(cw / 2 + 185, 53, 120, 24, 0x7f1d1d)
+    const endDayBtn = this.add.rectangle(cw - 60, 4, 100, 18, 0x7f1d1d)
+    endDayBtn.setOrigin(0.5, 0)
     endDayBtn.setInteractive({ useHandCursor: true })
     endDayBtn.on('pointerover', () => endDayBtn.setFillStyle(0x991b1b))
     endDayBtn.on('pointerout', () => endDayBtn.setFillStyle(0x7f1d1d))
@@ -919,20 +899,40 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudContainer.add(endDayBtn)
 
     const endDayLabel = this.add
-      .text(cw / 2 + 185, 53, 'END DAY (\u2318D)', {
-        fontSize: '11px',
+      .text(cw - 60, 13, 'END DAY (\u2318D)', {
+        fontSize: '9px',
         fontFamily: 'monospace',
         color: '#ffffff',
       })
       .setOrigin(0.5)
     this.hudContainer.add(endDayLabel)
 
+    const posText = this.add
+      .text(cw - 16, 26, '', {
+        fontSize: '11px',
+        fontFamily: 'monospace',
+        color: '#94a3b8',
+        align: 'right',
+      })
+      .setOrigin(1, 0)
+    this.hudContainer.add(posText)
+    this.hudTexts.set('positions', posText)
+
+    const poweredByText = this.add
+      .text(cw / 2, 46, 'Powered by Google Gemini', {
+        fontSize: '13px',
+        fontFamily: 'monospace',
+        color: '#64748b',
+      })
+      .setOrigin(0.5, 0)
+    this.hudContainer.add(poweredByText)
+
     this.updateHUD()
   }
 
   private buildTickerScroller(): void {
     const cw = this.scale.width
-    const scrollerY = 72
+    const scrollerY = 60
     const scrollerH = 20
 
     // Background bar
@@ -1016,14 +1016,13 @@ export class TradingUIScene extends Phaser.Scene {
     this.hudTexts
       .get('exposure')!
       .setText(`Net Exp: ${this.formatSignedDollars(netExposure)}  Gross: $${this.fmt(grossExposure)}`)
-    this.hudTexts.get('limit')!.setText(`Limit: ±$${this.fmt(gameState.maxPositionValue)}`)
 
-    this.hudTexts.get('day')!.setText(`Day ${gameState.dayNumber}`)
+    this.hudTexts.get('day')!.setText(`${marketData.formatDate(gameState.currentDate)} (${gameState.dayNumber})`)
 
     const mins = Math.floor(gameState.tradingTimeRemaining / 60)
     const secs = gameState.tradingTimeRemaining % 60
     const timerText = this.hudTexts.get('timer')!
-    timerText.setText(`${mins}:${secs.toString().padStart(2, '0')}`)
+    timerText.setText(`${mins}:${secs.toString().padStart(2, '0')} mins till close`)
     if (gameState.tradingTimeRemaining <= 30) {
       timerText.setColor('#f87171')
     } else if (gameState.tradingTimeRemaining <= 60) {

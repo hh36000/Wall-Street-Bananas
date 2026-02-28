@@ -51,7 +51,7 @@ const CAMERA_ZOOM = 1
 const INTERACT_DISTANCE = 50
 
 export class TradingFloorScene extends Phaser.Scene {
-  private player!: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle
+  private player!: Phaser.GameObjects.Sprite
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private interactKey!: Phaser.Input.Keyboard.Key
@@ -96,13 +96,14 @@ export class TradingFloorScene extends Phaser.Scene {
     this.cameras.main.setZoom(CAMERA_ZOOM)
     this.cameras.main.setBounds(0, 0, worldW, worldH)
 
-    this.player = this.add.rectangle(worldW / 2, worldH / 2, 14, 18, 0x6366f1)
-    ;(this.player as Phaser.GameObjects.Rectangle).setStrokeStyle(1, 0xa5b4fc)
+    this.player = this.add.sprite(worldW / 2, worldH / 2, 'player-tp')
+    this.player.setScale(0.08)
     this.player.setDepth(50)
     this.physics.add.existing(this.player)
     const playerBody = this.player.body as Phaser.Physics.Arcade.Body
     playerBody.setCollideWorldBounds(true)
-    playerBody.setSize(14, 18)
+    playerBody.setSize(this.player.width * 0.6, this.player.height * 0.5)
+    playerBody.setOffset(this.player.width * 0.2, this.player.height * 0.4)
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
 

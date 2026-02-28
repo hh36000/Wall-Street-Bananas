@@ -16,14 +16,21 @@ export class BootScene extends Phaser.Scene {
     const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a1a)
     bg.setOrigin(0.5)
 
-    const title = this.add.text(width / 2, height / 2 - 80, 'WALL ST BANANAS', {
+    const title = this.add.text(width / 2, height / 2 - 80, 'WALL STREET BANANAS', {
       fontSize: '32px',
-      fontFamily: 'monospace',
+      fontFamily: '"Press Start 2P"',
       color: '#facc15',
     })
     title.setOrigin(0.5)
 
-    const subtitle = this.add.text(width / 2, height / 2 - 50, 'Loading...', {
+    const hackathon = this.add.text(width / 2, height / 2 - 48, 'Gemini 3 NYC Hackathon', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#94a3b8',
+    })
+    hackathon.setOrigin(0.5)
+
+    const subtitle = this.add.text(width / 2, height / 2 - 28, 'Loading...', {
       fontSize: '14px',
       fontFamily: 'monospace',
       color: '#666',
@@ -55,7 +62,8 @@ export class BootScene extends Phaser.Scene {
     // Trading floor background
     this.load.image('trading-floor', '/game-assets/screens/trading_floor.png')
 
-    // Player uses a rectangle now — skip loading the oversized PNG
+    // Player sprite
+    this.load.image('player-tp', '/game-assets/sprites/player-tp.png')
 
     // NPC sprites — load all trader images
     // These three have the -tp suffix in filename
@@ -85,8 +93,6 @@ export class BootScene extends Phaser.Scene {
 
     // All traders now have sprite images — no placeholder generation needed
 
-    // Generate player sprite placeholder if the loaded image is too large
-    // (the real player.png is 1MB which might be huge - we'll use it but scale down)
 
     // Transition to morning scene
     this.scene.start('MorningScene')

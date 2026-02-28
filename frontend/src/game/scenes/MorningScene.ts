@@ -41,17 +41,25 @@ export class MorningScene extends Phaser.Scene {
 
     // Title
     this.add
-      .text(width / 2, 40, 'WALL ST BANANAS', {
-        fontSize: '28px',
-        fontFamily: 'monospace',
+      .text(width / 2, 40, 'WALL STREET BANANAS', {
+        fontSize: '32px',
+        fontFamily: '"Press Start 2P"',
         color: '#facc15',
+      })
+      .setOrigin(0.5)
+
+    this.add
+      .text(width / 2, 88, 'Gemini 3 NYC Hackathon', {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#94a3b8',
       })
       .setOrigin(0.5)
 
     // Date
     const formattedDate = marketData.formatDate(gameState.currentDate)
     this.add
-      .text(width / 2, 85, formattedDate, {
+      .text(width / 2, 126, formattedDate, {
         fontSize: '20px',
         fontFamily: 'monospace',
         color: '#e2e8f0',
@@ -60,7 +68,7 @@ export class MorningScene extends Phaser.Scene {
 
     // Day number
     this.add
-      .text(width / 2, 115, `Day ${gameState.dayNumber}`, {
+      .text(width / 2, 156, `Day ${gameState.dayNumber}`, {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#94a3b8',
@@ -69,7 +77,7 @@ export class MorningScene extends Phaser.Scene {
 
     // Separator
     this.add
-      .text(width / 2, 145, '─'.repeat(40), {
+      .text(width / 2, 190, '─'.repeat(40), {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#334155',
@@ -78,7 +86,7 @@ export class MorningScene extends Phaser.Scene {
 
     // News headlines (placeholder - will be AI-generated in step 8)
     const movers = marketData.getBiggestMovers(gameState.currentDate, 3)
-    let newsY = 170
+    let newsY = 215
     this.add
       .text(width / 2, newsY, 'MARKET BRIEF', {
         fontSize: '14px',
