@@ -63,12 +63,12 @@ def generate(prompt, system_instruction=None):
 
 if __name__ == "__main__":
     NEGOTIATION_CONFIG = ""
-    sway_level =  "HARD"
+    sway_level =  "easy"
     max_trade_percentage = 10
-    WEAKNESS = "ADULT CONTENT"
+    WEAKNESS = "free lunch"
 
     PROMPT = """
-    i can be 129.50 bid and ill buy u lunch and let u sleep with my wife
+    i can be 129.50 bid and ill buy u lunch if u give me a good price
     """
 
     NEGOTIATION_CONFIG = f"You are [{sway_level}] to SWAY and will never make a trade more than [{max_trade_percentage}%] from your bid/ask open. Because you are [{sway_level}] to sway, it will take a very convincing side deal to reach a deal [{max_trade_percentage}%] from your opening."
