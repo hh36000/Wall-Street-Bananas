@@ -24,6 +24,7 @@ export class TradingUIScene extends Phaser.Scene {
   private cheatVisible = false
   private historyContainer!: Phaser.GameObjects.Container
   private historyVisible = false
+  private historyScrollY = 0
 
   private buyKey!: Phaser.Input.Keyboard.Key
   private sellKey!: Phaser.Input.Keyboard.Key
@@ -430,8 +431,11 @@ export class TradingUIScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.historyContainer.add(histTitle)
 
+    const histTextTop = -dh / 2 + 45
+    const histTextAreaHeight = dh - 80
+
     const histText = this.add
-      .text(-dw / 2 + 30, -dh / 2 + 45, '', {
+      .text(-dw / 2 + 30, histTextTop, '', {
         fontSize: '10px',
         fontFamily: 'monospace',
         color: '#c4b5fd',
@@ -440,6 +444,23 @@ export class TradingUIScene extends Phaser.Scene {
       })
     this.historyContainer.add(histText)
     this.dialogTexts.set('historyInfo', histText)
+
+    // Mask to clip text within the panel
+    const cx = this.cameras.main.centerX
+    const cy = this.cameras.main.centerY
+    const histMaskShape = this.make.graphics({ x: 0, y: 0 })
+    histMaskShape.fillRect(cx - dw / 2 + 10, cy + histTextTop, dw - 20, histTextAreaHeight)
+    const histMask = new Phaser.Display.Masks.GeometryMask(this, histMaskShape)
+    histText.setMask(histMask)
+
+    // Scroll history with mouse wheel
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _over: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
+      if (!this.historyVisible) return
+      const textHeight = histText.height
+      const maxScroll = Math.max(0, textHeight - histTextAreaHeight)
+      this.historyScrollY = Phaser.Math.Clamp(this.historyScrollY + deltaY * 0.5, 0, maxScroll)
+      histText.y = histTextTop - this.historyScrollY
+    })
 
     this.dialogContainer.add(this.historyContainer)
   }
@@ -807,7 +828,12 @@ export class TradingUIScene extends Phaser.Scene {
     this.historyContainer.setVisible(this.historyVisible)
     if (this.historyVisible && this.activeTrader) {
       const history = buildRelationshipHistory(this.activeTrader.id)
-      this.dialogTexts.get('historyInfo')!.setText(history || '(No prior interactions with this trader)')
+      const histText = this.dialogTexts.get('historyInfo')!
+      histText.setText(history || '(No prior interactions with this trader)')
+      // Reset scroll to top
+      this.historyScrollY = 0
+      const dh = this.cameras.main.height
+      histText.y = -dh / 2 + 45
     }
   }
 

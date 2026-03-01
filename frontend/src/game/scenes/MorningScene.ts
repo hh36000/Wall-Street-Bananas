@@ -137,7 +137,7 @@ export class MorningScene extends Phaser.Scene {
       '',
       '- HOW TO PLAY -',
       '▸ Walk the floor and negotiate with traders',
-      '▸ Negotiate with traders to get the best price.',
+      '▸ Try to get the best price.',
       '▸ Buy low, sell high. Grow your capital.',
 
       '',

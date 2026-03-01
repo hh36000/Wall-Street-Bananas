@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import asyncio
@@ -63,6 +64,43 @@ Consider your full history with this trader when deciding how to respond, how to
 CRITICAL PRICING RULE: The prices you mention in your npc_message MUST EXACTLY match the updated_bid and updated_ask values you return. First decide what your new bid and ask prices are, then write your message referencing those exact numbers. Never say one price in your message but return a different number. For example, if you say "I'll offer at three-fifty", then updated_ask MUST be 3.50. If you aren't moving your prices, updated_bid and updated_ask should remain {current_bid} and {current_ask}.
 
 Stay in character. Keep responses short (1-3 sentences). Be entertaining."""
+
+PRICE_VALIDATION_SCHEMA = genai.types.Schema(
+    type=genai.types.Type.OBJECT,
+    required=["override", "reasoning"],
+    properties={
+        "override": genai.types.Schema(type=genai.types.Type.BOOLEAN, description="True if the structured bid/ask values do NOT match the prices in the NPC message and need correcting."),
+        "reasoning": genai.types.Schema(type=genai.types.Type.STRING, description="Short explanation of what prices were found in the message vs the structured values."),
+        "updated_bid": genai.types.Schema(type=genai.types.Type.NUMBER, description="Corrected bid price extracted from the message. Only set if override is true."),
+        "updated_ask": genai.types.Schema(type=genai.types.Type.NUMBER, description="Corrected ask price extracted from the message. Only set if override is true."),
+    },
+)
+
+
+async def validate_prices(client, npc_message: str, bid: float, ask: float) -> dict | None:
+    """Use Flash to verify that structured bid/ask match the NPC message text."""
+    try:
+        prompt = (
+            f"An NPC trader said this message:\n\"{npc_message}\"\n\n"
+            f"The system recorded bid={bid:.2f}, ask={ask:.2f}.\n\n"
+            "Do the prices mentioned in the message match these bid/ask values? "
+            "If the message mentions specific prices that differ from the recorded values, "
+            "set override=true and provide the correct bid and ask from the message. "
+            "If the message doesn't mention specific prices, or the prices match, set override=false."
+        )
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=PRICE_VALIDATION_SCHEMA,
+            ),
+        )
+        return json.loads(response.text)
+    except Exception as e:
+        logger.warning(f"Flash price validation failed: {e}")
+        return None
+
 
 RESPONSE_SCHEMA = genai.types.Schema(
     type=genai.types.Type.OBJECT,
@@ -147,6 +185,20 @@ async def negotiate(req: NegotiateRequest):
         if updated_bid >= updated_ask:
             updated_bid = req.current_bid
             updated_ask = req.current_ask
+
+        # Flash validation: sync bid/ask with what the NPC actually said
+        validation = await validate_prices(client, result["npc_message"], updated_bid, updated_ask)
+        if validation:
+            logger.info(f"Flash validation reasoning: {validation.get('reasoning', 'N/A')}")
+            if validation.get("override"):
+                flash_bid = validation.get("updated_bid", updated_bid)
+                flash_ask = validation.get("updated_ask", updated_ask)
+                if flash_bid != updated_bid:
+                    logger.info(f"Flash override: bid {updated_bid}->{flash_bid}")
+                    updated_bid = flash_bid
+                if flash_ask != updated_ask:
+                    logger.info(f"Flash override: ask {updated_ask}->{flash_ask}")
+                    updated_ask = flash_ask
 
         logger.info("--------------------------------")
 
